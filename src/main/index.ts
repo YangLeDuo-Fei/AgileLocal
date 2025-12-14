@@ -7,6 +7,8 @@ import logger from './utils/logger';
 import { runMigrations } from './database/migrator';
 import { closeDatabase } from './database/connection';
 import { registerTaskIpcHandlers } from './ipc/taskIpc';
+import { registerGitIpcHandlers } from './ipc/gitIpc';
+import { getGitSyncService } from './services/GitSyncService';
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -62,6 +64,11 @@ app.whenReady().then(async () => {
 
     // 注册 IPC handlers
     registerTaskIpcHandlers();
+    registerGitIpcHandlers();
+
+    // 启动 Git 同步服务（定时任务）
+    const gitSyncService = getGitSyncService();
+    gitSyncService.start();
 
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) {
@@ -78,6 +85,11 @@ app.on('window-all-closed', () => {
 
 app.on('before-quit', () => {
     logger.info('Application shutting down...');
+    
+    // 停止 Git 同步服务
+    const gitSyncService = getGitSyncService();
+    gitSyncService.stop();
+    
     closeDatabase();
 });
 

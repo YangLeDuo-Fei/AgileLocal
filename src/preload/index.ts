@@ -6,6 +6,7 @@ import { contextBridge, ipcRenderer } from 'electron';
 // IPC Channels (需要与主进程保持一致)
 const IpcChannels = {
     UPDATE_TASK_STATUS: 'task:updateStatus',
+    SYNC_GIT: 'git:sync',
 } as const;
 
 // 安全暴露 API 到渲染进程
@@ -24,6 +25,12 @@ contextBridge.exposeInMainWorld('electronAPI', {
                 newOrder,
                 expectedVersion,
             });
+        },
+    },
+    // Git 模块
+    git: {
+        sync: async () => {
+            return await ipcRenderer.invoke(IpcChannels.SYNC_GIT);
         },
     },
     // 用户模块 (将在后续 Phase 中实现)

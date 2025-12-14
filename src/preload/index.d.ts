@@ -10,6 +10,9 @@ export interface IElectronAPI {
             expectedVersion: number
         ) => Promise<{ success: boolean; newVersion?: number } | { isAppError: true; code: string; message: string }>;
     };
+    git: {
+        sync: () => Promise<{ success: boolean } | { isAppError: true; code: string; message: string }>;
+    };
     user: {
         login: (username: string, password: string) => Promise<any>;
     };

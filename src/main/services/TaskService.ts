@@ -141,3 +141,4 @@ export async function updateStatus(
         logger.info(`Task ${taskId} status updated from ${oldStatus} to ${newStatus}, order from ${oldOrder} to ${newOrder}`);
     });
 }
+

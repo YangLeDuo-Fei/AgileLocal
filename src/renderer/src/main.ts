@@ -2,8 +2,18 @@
 // Vue 应用入口文件
 
 import { createApp } from 'vue';
+import { createPinia } from 'pinia';
+import naive from 'naive-ui';
 import App from './App.vue';
 
 const app = createApp(App);
+
+// 使用 Pinia
+const pinia = createPinia();
+app.use(pinia);
+
+// 使用 Naive UI
+app.use(naive);
+
 app.mount('#app');
 

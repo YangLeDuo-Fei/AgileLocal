@@ -6,6 +6,7 @@ import { join } from 'path';
 import logger from './utils/logger';
 import { runMigrations } from './database/migrator';
 import { closeDatabase } from './database/connection';
+import { registerTaskIpcHandlers } from './ipc/taskIpc';
 
 let mainWindow: BrowserWindow | null = null;
 
@@ -50,11 +51,17 @@ app.whenReady().then(async () => {
     // 初始化数据库并运行迁移
     try {
         await initializeDatabase();
-        createWindow();
     } catch (error) {
-        logger.error('Failed to start application', error);
-        app.quit();
+        logger.error('Failed to initialize database', error);
+        // 数据库初始化失败时，仍然创建窗口，但会在 UI 中显示错误提示
+        // 这样用户可以看到错误信息，而不是应用直接退出
     }
+    
+    // 无论数据库是否初始化成功，都创建窗口
+    createWindow();
+
+    // 注册 IPC handlers
+    registerTaskIpcHandlers();
 
     app.on('activate', () => {
         if (BrowserWindow.getAllWindows().length === 0) {

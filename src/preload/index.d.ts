@@ -3,8 +3,12 @@
 
 export interface IElectronAPI {
     task: {
-        getBySprint: (sprintId: number) => Promise<any[]>;
-        updateStatus: (taskId: number, status: string, index: number, expectedVersion: number) => Promise<boolean>;
+        updateStatus: (
+            taskId: number,
+            newStatus: 'ToDo' | 'Doing' | 'Done',
+            newOrder: number,
+            expectedVersion: number
+        ) => Promise<{ success: boolean; newVersion?: number } | { isAppError: true; code: string; message: string }>;
     };
     user: {
         login: (username: string, password: string) => Promise<any>;

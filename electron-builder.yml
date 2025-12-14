@@ -1,0 +1,42 @@
+# 严格按照 V！.md v2025.PerfectScore.Final 生成
+# electron-builder 打包配置
+
+appId: com.agilelocal.app
+productName: AgileLocal
+copyright: Copyright © 2025 AgileLocal
+
+directories:
+  output: dist
+  buildResources: build
+
+files:
+  - '!**/.vscode/*'
+  - '!src/**/*'
+  - '!*.md'
+  - '!*.log'
+  - '!*.config.ts'
+  - '!*.config.js'
+  - '!tsconfig.json'
+  - '!electron-builder.yml'
+  - 'out/**/*'
+  - 'package.json'
+
+asar: true
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+  requestedExecutionLevel: asInvoker
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: AgileLocal
+  deleteAppDataOnUninstall: false
+
+extraMetadata:
+  main: out/main/index.js

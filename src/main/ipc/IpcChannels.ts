@@ -5,3 +5,4 @@ export const IpcChannels = {
     UPDATE_TASK_STATUS: 'task:updateStatus',
     SYNC_GIT: 'git:sync',
 } as const;
+

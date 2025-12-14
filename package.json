@@ -3,6 +3,41 @@
   "version": "1.0.0",
   "description": "AgileLocal 敏捷研发项目管理平台",
   "main": "./out/main/index.js",
+  "build": {
+    "appId": "com.agilelocal.app",
+    "productName": "AgileLocal",
+    "directories": {
+      "output": "dist",
+      "buildResources": "build"
+    },
+    "files": [
+      "!**/.vscode/*",
+      "!src/**/*",
+      "!*.md",
+      "!*.log",
+      "!*.config.ts",
+      "!*.config.js",
+      "!tsconfig.json",
+      "!electron-builder.yml",
+      "out/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ]
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "AgileLocal"
+    }
+  },
   "scripts": {
     "postinstall": "electron-builder install-app-deps && npx electron-rebuild --force -w better-sqlite3-multiple-ciphers bcrypt",
     "postinstall:skip": "echo Skipping native module rebuild",

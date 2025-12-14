@@ -330,3 +330,4 @@ export function getGitSyncService(): GitSyncService {
     }
     return gitSyncServiceInstance;
 }
+

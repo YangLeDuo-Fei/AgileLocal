@@ -187,9 +187,64 @@ export const useTaskStore = defineStore('task', () => {
         }
     }
 
+    /**
+     * 加载任务列表
+     */
+    async function loadTasks(projectId: number, sprintId?: number | null) {
+        try {
+            const result = await window.electronAPI.task.getTasks(projectId, sprintId);
+            if (result && typeof result === 'object' && 'success' in result && result.success) {
+                tasks.value = (result as any).tasks || [];
+            } else {
+                throw new Error((result as any).message || 'Failed to load tasks');
+            }
+        } catch (error) {
+            console.error('Failed to load tasks:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * 创建任务
+     */
+    async function createTask(
+        projectId: number,
+        title: string,
+        description?: string | null,
+        storyPoints: number = 0,
+        status: 'ToDo' | 'Doing' | 'Done' = 'ToDo',
+        sprintId?: number | null
+    ): Promise<number> {
+        try {
+            const result = await window.electronAPI.task.create({
+                projectId,
+                title,
+                description,
+                storyPoints,
+                status,
+                sprintId: sprintId || null,
+            });
+
+            if (result && typeof result === 'object' && 'success' in result && result.success) {
+                const taskId = (result as any).taskId;
+                // 重新加载任务列表
+                await loadTasks(projectId, sprintId);
+                return taskId;
+            } else {
+                const error = result as any;
+                throw new Error(error.message || 'Failed to create task');
+            }
+        } catch (error) {
+            console.error('Failed to create task:', error);
+            throw error;
+        }
+    }
+
     return {
         tasks,
         setTasks,
+        loadTasks,
+        createTask,
         updateTaskStatus,
         rollbackState,
     };

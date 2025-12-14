@@ -1,0 +1,107 @@
+// 项目状态管理 (Pinia Store)
+
+import { defineStore } from 'pinia';
+import { ref, computed } from 'vue';
+
+export interface Project {
+    id: number;
+    name: string;
+    description: string | null;
+    created_at: string;
+}
+
+export const useProjectStore = defineStore('project', () => {
+    const projects = ref<Project[]>([]);
+    const currentProjectId = ref<number | null>(null);
+    const loading = ref(false);
+
+    /**
+     * 加载所有项目
+     */
+    async function loadProjects() {
+        loading.value = true;
+        try {
+            const result = await window.electronAPI.project.getAll();
+            if (result && typeof result === 'object' && 'success' in result && result.success) {
+                projects.value = (result as any).projects || [];
+            } else {
+                throw new Error((result as any).message || 'Failed to load projects');
+            }
+        } catch (error) {
+            console.error('Failed to load projects:', error);
+            throw error;
+        } finally {
+            loading.value = false;
+        }
+    }
+
+    /**
+     * 创建项目
+     */
+    async function createProject(name: string, description?: string | null): Promise<number> {
+        try {
+            const result = await window.electronAPI.project.create(name, description);
+            if (result && typeof result === 'object' && 'success' in result && result.success) {
+                const projectId = (result as any).projectId;
+                // 重新加载项目列表
+                await loadProjects();
+                return projectId;
+            } else {
+                const error = result as any;
+                throw new Error(error.message || 'Failed to create project');
+            }
+        } catch (error) {
+            console.error('Failed to create project:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * 删除项目
+     */
+    async function deleteProject(projectId: number) {
+        try {
+            const result = await window.electronAPI.project.delete(projectId);
+            if (result && typeof result === 'object' && 'success' in result && result.success) {
+                // 重新加载项目列表
+                await loadProjects();
+                // 如果删除的是当前项目，清空当前项目ID
+                if (currentProjectId.value === projectId) {
+                    currentProjectId.value = null;
+                }
+            } else {
+                const error = result as any;
+                throw new Error(error.message || 'Failed to delete project');
+            }
+        } catch (error) {
+            console.error('Failed to delete project:', error);
+            throw error;
+        }
+    }
+
+    /**
+     * 设置当前项目
+     */
+    function setCurrentProject(projectId: number | null) {
+        currentProjectId.value = projectId;
+    }
+
+    /**
+     * 获取当前项目
+     */
+    const currentProject = computed(() => {
+        if (!currentProjectId.value) return null;
+        return projects.value.find(p => p.id === currentProjectId.value) || null;
+    });
+
+    return {
+        projects,
+        currentProjectId,
+        currentProject,
+        loading,
+        loadProjects,
+        createProject,
+        deleteProject,
+        setCurrentProject,
+    };
+});

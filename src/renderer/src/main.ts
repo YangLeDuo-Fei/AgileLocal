@@ -5,6 +5,7 @@ import { createApp } from 'vue';
 import { createPinia } from 'pinia';
 import naive from 'naive-ui';
 import App from './App.vue';
+import router from './router';
 
 const app = createApp(App);
 
@@ -14,6 +15,9 @@ app.use(pinia);
 
 // 使用 Naive UI
 app.use(naive);
+
+// 使用 Vue Router
+app.use(router);
 
 app.mount('#app');
 

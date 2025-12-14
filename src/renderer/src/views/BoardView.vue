@@ -15,6 +15,11 @@
               style="width: 300px; height: 100%;"
               :bordered="true"
             >
+              <template #header-extra>
+                <n-button size="small" @click="showCreateTaskDialog = true; createTaskForm.status = 'ToDo'">
+                  添加任务
+                </n-button>
+              </template>
               <SortableContext
                 :items="todoTaskIds"
                 :strategy="verticalListSortingStrategy"
@@ -35,6 +40,11 @@
               style="width: 300px; height: 100%;"
               :bordered="true"
             >
+              <template #header-extra>
+                <n-button size="small" @click="showCreateTaskDialog = true; createTaskForm.status = 'Doing'">
+                  添加任务
+                </n-button>
+              </template>
               <SortableContext
                 :items="doingTaskIds"
                 :strategy="verticalListSortingStrategy"
@@ -55,6 +65,11 @@
               style="width: 300px; height: 100%;"
               :bordered="true"
             >
+              <template #header-extra>
+                <n-button size="small" @click="showCreateTaskDialog = true; createTaskForm.status = 'Done'">
+                  添加任务
+                </n-button>
+              </template>
               <SortableContext
                 :items="doneTaskIds"
                 :strategy="verticalListSortingStrategy"
@@ -72,11 +87,32 @@
         </DndContext>
       </n-layout-content>
     </n-layout>
+
+    <!-- 创建任务对话框 -->
+    <n-modal v-model:show="showCreateTaskDialog" preset="dialog" title="创建任务" positive-text="创建" @positive-click="handleCreateTask">
+      <n-form :model="createTaskForm">
+        <n-form-item label="任务标题">
+          <n-input v-model:value="createTaskForm.title" placeholder="请输入任务标题" />
+        </n-form-item>
+        <n-form-item label="任务描述">
+          <n-input
+            v-model:value="createTaskForm.description"
+            type="textarea"
+            placeholder="请输入任务描述（可选）"
+            :rows="3"
+          />
+        </n-form-item>
+        <n-form-item label="故事点">
+          <n-input-number v-model:value="createTaskForm.storyPoints" :min="0" />
+        </n-form-item>
+      </n-form>
+    </n-modal>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, onMounted } from 'vue';
+import { computed, onMounted, ref } from 'vue';
+import { useRoute, useRouter } from 'vue-router';
 import {
   DndContext,
   DragEndEvent,
@@ -88,15 +124,66 @@ import {
 import {
   SortableContext,
   verticalListSortingStrategy,
-  useSortable,
 } from '@dnd-kit/sortable';
-import { NCard, NLayout, NLayoutContent, NSpace, useMessage } from 'naive-ui';
+import { NCard, NLayout, NLayoutContent, NSpace, useMessage, NButton, NModal, NForm, NFormItem, NInput, NInputNumber } from 'naive-ui';
 import { debounce } from 'lodash-es';
 import { useTaskStore } from '../stores/taskStore';
+import { useProjectStore } from '../stores/projectStore';
 import SortableTaskItem from '../components/SortableTaskItem.vue';
 
+const route = useRoute();
+const router = useRouter();
 const taskStore = useTaskStore();
+const projectStore = useProjectStore();
 const message = useMessage();
+
+// 从路由参数获取项目 ID
+const props = defineProps<{
+  id: string | number;
+}>();
+
+const showCreateTaskDialog = ref(false);
+const createTaskForm = ref<{
+  title: string;
+  description: string;
+  storyPoints: number;
+  status: 'ToDo' | 'Doing' | 'Done';
+}>({
+  title: '',
+  description: '',
+  storyPoints: 0,
+  status: 'ToDo',
+});
+
+const handleCreateTask = async () => {
+  if (!createTaskForm.value.title.trim()) {
+    message.error('请输入任务标题');
+    return false;
+  }
+
+  try {
+    const projectId = typeof props.id === 'string' ? parseInt(props.id) : props.id;
+    await taskStore.createTask(
+      projectId,
+      createTaskForm.value.title.trim(),
+      createTaskForm.value.description.trim() || null,
+      createTaskForm.value.storyPoints || 0,
+      createTaskForm.value.status || 'ToDo'
+    );
+    message.success('任务创建成功');
+    showCreateTaskDialog.value = false;
+    createTaskForm.value = {
+      title: '',
+      description: '',
+      storyPoints: 0,
+      status: 'ToDo',
+    };
+    return true;
+  } catch (error: any) {
+    message.error(error.message || '创建任务失败');
+    return false;
+  }
+};
 
 // 配置拖拽传感器
 const sensors = useSensors(
@@ -242,8 +329,18 @@ const handleDragEnd = (event: DragEndEvent) => {
   debouncedUpdateStatus(taskId, newStatus, newOrder, task.version);
 };
 
-onMounted(() => {
-  // 加载任务列表（后续实现）
+onMounted(async () => {
+  // 设置当前项目
+  const projectId = typeof props.id === 'string' ? parseInt(props.id) : props.id;
+  const projectStore = useProjectStore();
+  projectStore.setCurrentProject(projectId);
+
+  // 加载任务列表
+  try {
+    await taskStore.loadTasks(projectId);
+  } catch (error: any) {
+    message.error(error.message || '加载任务列表失败');
+  }
 });
 </script>
 

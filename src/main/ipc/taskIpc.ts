@@ -4,7 +4,7 @@
 import { ipcMain } from 'electron';
 import { z } from 'zod';
 import { IpcChannels } from './IpcChannels';
-import { updateStatus } from '../services/TaskService';
+import { updateStatus, createTask, getTasksByProject } from '../services/TaskService';
 import { AppError } from '../utils/AppError';
 import logger from '../utils/logger';
 
@@ -34,10 +34,10 @@ export function registerTaskIpcHandlers(): void {
             const { taskId, newStatus, newOrder, expectedVersion } = validationResult.data;
 
             // 调用服务层方法
-            await updateStatus(taskId, newStatus, newOrder, expectedVersion);
+            const result = await updateStatus(taskId, newStatus, newOrder, expectedVersion);
 
             // 返回成功（返回更新后的 version）
-            return { success: true, newVersion: expectedVersion + 1 };
+            return { success: true, newVersion: result.newVersion };
         } catch (error) {
             // 捕获所有错误并返回 AppError.toSerializable()
             if (error instanceof AppError) {
@@ -52,6 +52,72 @@ export function registerTaskIpcHandlers(): void {
             );
             logger.error('IPC updateStatus failed with unknown error', error);
             return appError.toSerializable();
+        }
+    });
+
+    // 创建任务
+    ipcMain.handle(IpcChannels.CREATE_TASK, async (_event, data: unknown) => {
+        try {
+            const CreateTaskSchema = z.object({
+                projectId: z.number().int().positive(),
+                title: z.string().min(1),
+                description: z.string().nullable().optional(),
+                storyPoints: z.number().int().nonnegative().default(0),
+                status: z.enum(['ToDo', 'Doing', 'Done']).default('ToDo'),
+                sprintId: z.number().int().positive().nullable().optional(),
+            });
+
+            const validationResult = CreateTaskSchema.safeParse(data);
+            if (!validationResult.success) {
+                logger.error('IPC createTask validation failed', validationResult.error);
+                return AppError.toSerializable(
+                    new AppError('400_INVALID_INPUT', `Invalid input: ${validationResult.error.message}`)
+                );
+            }
+
+            const { projectId, title, description, storyPoints, status, sprintId } = validationResult.data;
+            const taskId = await createTask(projectId, title, description || null, storyPoints, status, sprintId || null);
+            return { success: true, taskId };
+        } catch (error) {
+            if (error instanceof AppError) {
+                logger.error(`IPC createTask failed with AppError: ${error.code}`, error.message);
+                return AppError.toSerializable(error);
+            }
+            logger.error('IPC createTask failed with unknown error', error);
+            return AppError.toSerializable(
+                new AppError('500_DB_ERROR', `Failed to create task: ${error}`)
+            );
+        }
+    });
+
+    // 获取任务列表
+    ipcMain.handle(IpcChannels.GET_TASKS, async (_event, data: unknown) => {
+        try {
+            const GetTasksSchema = z.object({
+                projectId: z.number().int().positive(),
+                sprintId: z.number().int().positive().nullable().optional(),
+            });
+
+            const validationResult = GetTasksSchema.safeParse(data);
+            if (!validationResult.success) {
+                logger.error('IPC getTasks validation failed', validationResult.error);
+                return AppError.toSerializable(
+                    new AppError('400_INVALID_INPUT', `Invalid input: ${validationResult.error.message}`)
+                );
+            }
+
+            const { projectId, sprintId } = validationResult.data;
+            const tasks = await getTasksByProject(projectId, sprintId);
+            return { success: true, tasks };
+        } catch (error) {
+            if (error instanceof AppError) {
+                logger.error(`IPC getTasks failed with AppError: ${error.code}`, error.message);
+                return AppError.toSerializable(error);
+            }
+            logger.error('IPC getTasks failed with unknown error', error);
+            return AppError.toSerializable(
+                new AppError('500_DB_ERROR', `Failed to get tasks: ${error}`)
+            );
         }
     });
 

@@ -8,6 +8,9 @@ import { runMigrations } from './database/migrator';
 import { closeDatabase, getDatabase } from './database/connection';
 import { registerTaskIpcHandlers } from './ipc/taskIpc';
 import { registerGitIpcHandlers } from './ipc/gitIpc';
+import { registerProjectIpcHandlers } from './ipc/projectIpc';
+import { registerGitRepositoryIpcHandlers } from './ipc/gitRepositoryIpc';
+import { registerSystemIpcHandlers } from './ipc/systemIpc';
 import { getGitSyncService } from './services/GitSyncService';
 
 let mainWindow: BrowserWindow | null = null;
@@ -138,6 +141,9 @@ app.whenReady().then(async () => {
     // 注册 IPC handlers
     registerTaskIpcHandlers();
     registerGitIpcHandlers();
+    registerProjectIpcHandlers();
+    registerGitRepositoryIpcHandlers();
+    registerSystemIpcHandlers();
 
     // 启动 Git 同步服务（定时任务）
     const gitSyncService = getGitSyncService();

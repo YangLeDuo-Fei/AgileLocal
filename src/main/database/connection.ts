@@ -39,6 +39,9 @@ export async function getDatabase(): Promise<Kysely<DB>> {
         // 2. 设置 WAL 模式，提升并发性能
         sqliteDb.pragma('journal_mode = WAL');
 
+        // 3. 启用外键检查（在连接级别设置，适用于所有后续操作）
+        sqliteDb.pragma('foreign_keys = ON');
+
         // 创建 Kysely 实例
         const dialect = new SqliteDialect({
             database: sqliteDb,

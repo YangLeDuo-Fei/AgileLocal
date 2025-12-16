@@ -22,3 +22,5 @@ export const IpcChannels = {
     GET_SYSTEM_INFO: 'system:getInfo',
 } as const;
 
+
+

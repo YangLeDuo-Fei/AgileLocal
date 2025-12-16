@@ -2,7 +2,9 @@
 <template>
   <n-config-provider>
     <n-message-provider>
-      <router-view />
+      <ErrorBoundary>
+        <router-view />
+      </ErrorBoundary>
     </n-message-provider>
   </n-config-provider>
 </template>
@@ -12,6 +14,7 @@ import {
   NConfigProvider,
   NMessageProvider,
 } from 'naive-ui';
+import ErrorBoundary from './components/ErrorBoundary.vue';
 </script>
 
 <style>

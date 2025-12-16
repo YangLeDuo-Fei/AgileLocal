@@ -23,23 +23,34 @@ export function registerProjectIpcHandlers(): void {
             const validationResult = CreateProjectSchema.safeParse(data);
             if (!validationResult.success) {
                 logger.error('IPC createProject validation failed', validationResult.error);
-                return AppError.toSerializable(
-                    new AppError('400_INVALID_INPUT', `Invalid input: ${validationResult.error.message}`)
-                );
+                const error = new AppError('400_INVALID_INPUT', `Invalid input: ${validationResult.error.message}`);
+                return error.toSerializable();
             }
 
             const { name, description } = validationResult.data;
             const projectId = await ProjectService.createProject(name, description || null);
-            return { success: true, projectId };
+            
+            // 获取创建的项目信息（通过查询数据库）
+            const projects = await ProjectService.getAllProjects();
+            const newProject = projects.find(p => p.id === projectId);
+            
+            if (!newProject) {
+                // 如果找不到项目，只返回 projectId
+                return { success: true, projectId };
+            }
+            
+            return { success: true, projectId, project: newProject };
         } catch (error) {
             if (error instanceof AppError) {
                 logger.error(`IPC createProject failed with AppError: ${error.code}`, error.message);
-                return AppError.toSerializable(error);
+                return error.toSerializable();
             }
             logger.error('IPC createProject failed with unknown error', error);
-            return AppError.toSerializable(
-                new AppError('500_DB_ERROR', `Failed to create project: ${error}`)
+            const appError = new AppError(
+                '500_DB_ERROR',
+                `Failed to create project: ${error instanceof Error ? error.message : String(error)}`
             );
+            return appError.toSerializable();
         }
     });
 
@@ -51,12 +62,14 @@ export function registerProjectIpcHandlers(): void {
         } catch (error) {
             if (error instanceof AppError) {
                 logger.error(`IPC getProjects failed with AppError: ${error.code}`, error.message);
-                return AppError.toSerializable(error);
+                return error.toSerializable();
             }
             logger.error('IPC getProjects failed with unknown error', error);
-            return AppError.toSerializable(
-                new AppError('500_DB_ERROR', `Failed to get projects: ${error}`)
+            const appError = new AppError(
+                '500_DB_ERROR',
+                `Failed to get projects: ${error instanceof Error ? error.message : String(error)}`
             );
+            return appError.toSerializable();
         }
     });
 
@@ -64,9 +77,8 @@ export function registerProjectIpcHandlers(): void {
     ipcMain.handle(IpcChannels.DELETE_PROJECT, async (_event, projectId: unknown) => {
         try {
             if (typeof projectId !== 'number' || projectId <= 0) {
-                return AppError.toSerializable(
-                    new AppError('400_INVALID_INPUT', 'Invalid projectId')
-                );
+                const error = new AppError('400_INVALID_INPUT', 'Invalid projectId');
+                return error.toSerializable();
             }
 
             await ProjectService.deleteProject(projectId);
@@ -74,14 +86,22 @@ export function registerProjectIpcHandlers(): void {
         } catch (error) {
             if (error instanceof AppError) {
                 logger.error(`IPC deleteProject failed with AppError: ${error.code}`, error.message);
-                return AppError.toSerializable(error);
+                return error.toSerializable();
             }
             logger.error('IPC deleteProject failed with unknown error', error);
-            return AppError.toSerializable(
-                new AppError('500_DB_ERROR', `Failed to delete project: ${error}`)
+            const appError = new AppError(
+                '500_DB_ERROR',
+                `Failed to delete project: ${error instanceof Error ? error.message : String(error)}`
             );
+            return appError.toSerializable();
         }
     });
 
     logger.info('Project IPC handlers registered');
 }
+
+
+
+
+
+

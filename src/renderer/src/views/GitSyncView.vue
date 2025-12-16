@@ -122,6 +122,10 @@ const handleCreateRepo = async () => {
       createRepoForm.value.token.trim()
     );
 
+    if (result && typeof result === 'object' && 'isAppError' in result && result.isAppError) {
+      const error = result as any;
+      throw new Error(error.message || '添加仓库失败');
+    }
     if (result && typeof result === 'object' && 'success' in result && result.success) {
       message.success('仓库添加成功');
       showCreateRepoDialog.value = false;
@@ -129,8 +133,7 @@ const handleCreateRepo = async () => {
       await loadRepositories();
       return true;
     } else {
-      const error = result as any;
-      throw new Error(error.message || '添加仓库失败');
+      throw new Error('Unexpected response format');
     }
   } catch (error: any) {
     message.error(error.message || '添加仓库失败');
@@ -146,10 +149,14 @@ const loadRepositories = async () => {
   loading.value = true;
   try {
     const result = await window.electronAPI.git.getRepositories(projectStore.currentProjectId);
+    if (result && typeof result === 'object' && 'isAppError' in result && result.isAppError) {
+      const error = result as any;
+      throw new Error(error.message || '加载仓库列表失败');
+    }
     if (result && typeof result === 'object' && 'success' in result && result.success) {
       repositories.value = (result as any).repositories || [];
     } else {
-      throw new Error((result as any).message || '加载仓库列表失败');
+      throw new Error('Unexpected response format');
     }
   } catch (error: any) {
     message.error(error.message || '加载仓库列表失败');
@@ -161,12 +168,15 @@ const loadRepositories = async () => {
 const handleSync = async (repoId: number) => {
   try {
     const result = await window.electronAPI.git.sync();
+    if (result && typeof result === 'object' && 'isAppError' in result && result.isAppError) {
+      const error = result as any;
+      throw new Error(error.message || '同步失败');
+    }
     if (result && typeof result === 'object' && 'success' in result && result.success) {
       message.success('同步成功');
       await loadRepositories();
     } else {
-      const error = result as any;
-      throw new Error(error.message || '同步失败');
+      throw new Error('Unexpected response format');
     }
   } catch (error: any) {
     message.error(error.message || '同步失败');
@@ -176,12 +186,15 @@ const handleSync = async (repoId: number) => {
 const handleDeleteRepo = async (repoId: number) => {
   try {
     const result = await window.electronAPI.git.deleteRepository(repoId);
+    if (result && typeof result === 'object' && 'isAppError' in result && result.isAppError) {
+      const error = result as any;
+      throw new Error(error.message || '删除失败');
+    }
     if (result && typeof result === 'object' && 'success' in result && result.success) {
       message.success('删除成功');
       await loadRepositories();
     } else {
-      const error = result as any;
-      throw new Error(error.message || '删除失败');
+      throw new Error('Unexpected response format');
     }
   } catch (error: any) {
     message.error(error.message || '删除失败');
@@ -245,3 +258,9 @@ onMounted(async () => {
   margin: 0 auto;
 }
 </style>
+
+
+
+
+
+

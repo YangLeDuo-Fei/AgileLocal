@@ -113,24 +113,28 @@ app.whenReady().then(async () => {
     // 初始化数据库并运行迁移
     let dbInitialized = false;
     try {
+        logger.info('Starting database initialization...');
         await initializeDatabase();
         dbInitialized = true;
+        logger.info('Database initialization completed successfully');
     } catch (error) {
         logger.error('Failed to initialize database', error);
+        const errorMessage = error instanceof Error ? error.message : String(error);
         
-        // 打包后数据库初始化失败，显示友好错误提示
-        if (app.isPackaged) {
-            dialog.showErrorBox(
-                '数据库初始化失败',
-                '应用无法初始化数据库。\n\n' +
-                '可能的原因：\n' +
-                '1. 数据库文件损坏\n' +
-                '2. 密钥文件损坏\n' +
-                '3. 文件权限问题\n\n' +
-                '请查看日志文件获取详细信息：\n' +
-                `${app.getPath('appData')}/AgileLocal/logs/app.log`
-            );
-        }
+        // 无论是否打包，都显示错误提示
+        dialog.showErrorBox(
+            '数据库初始化失败',
+            '应用无法初始化数据库。\n\n' +
+            `错误信息: ${errorMessage}\n\n` +
+            '可能的原因：\n' +
+            '1. 迁移文件路径不正确\n' +
+            '2. 数据库文件损坏\n' +
+            '3. 密钥文件损坏\n' +
+            '4. 文件权限问题\n\n' +
+            '请查看日志文件获取详细信息：\n' +
+            `${app.getPath('appData')}/AgileLocal/logs/app.log`
+        );
+        
         // 数据库初始化失败时，仍然创建窗口，但会在 UI 中显示错误提示
         // 这样用户可以看到错误信息，而不是应用直接退出
     }

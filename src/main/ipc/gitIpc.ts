@@ -37,3 +37,9 @@ export function registerGitIpcHandlers(): void {
     logger.info('Git IPC handlers registered');
 }
 
+
+
+
+
+
+

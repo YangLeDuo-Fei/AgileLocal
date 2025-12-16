@@ -96,3 +96,9 @@ export async function deleteProject(projectId: number): Promise<void> {
         throw new AppError('500_DB_ERROR', `Failed to delete project: ${error}`);
     }
 }
+
+
+
+
+
+

@@ -225,8 +225,8 @@ const handleCreateProject = async () => {
     message.success('项目创建成功');
     showCreateProjectDialog.value = false;
     createProjectForm.value = { name: '', description: '' };
-    // 自动跳转到看板
-    router.push(`/project/${projectId}/board`);
+    // 不自动跳转，让用户留在项目列表页面查看新创建的项目
+    // 用户可以选择点击项目进入看板
     return true;
   } catch (error: any) {
     message.error(error.message || '创建项目失败');
@@ -398,3 +398,9 @@ onMounted(async () => {
   align-items: center;
 }
 </style>
+
+
+
+
+
+

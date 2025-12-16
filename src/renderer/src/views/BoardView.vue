@@ -2,19 +2,32 @@
 <template>
   <div class="board-container">
     <n-layout>
-      <n-layout-content style="padding: 20px;">
-        <DndContext
-          :sensors="sensors"
-          :collision-detection="closestCenter"
-          @drag-end="handleDragEnd"
-        >
-          <n-space horizontal :size="20" style="height: 100%;">
-            <!-- ToDo 列 -->
-            <n-card
-              :title="`ToDo (${todoTasks.length})`"
-              style="width: 300px; height: 100%;"
-              :bordered="true"
-            >
+      <n-layout-header class="board-header" bordered>
+        <div class="header-content">
+          <n-button text @click="router.push('/')">
+            ← 返回首页
+          </n-button>
+          <h2 class="board-title">看板视图</h2>
+          <n-text v-if="projectStore.currentProject" depth="3">
+            {{ projectStore.currentProject.name }}
+          </n-text>
+        </div>
+      </n-layout-header>
+      <n-layout-content style="padding: 20px; overflow-y: auto;">
+        <n-spin :show="loading">
+          <DndContext
+            v-if="!loading"
+            :sensors="sensors"
+            :collision-detection="closestCenter"
+            @drag-end="handleDragEnd"
+          >
+            <n-space horizontal :size="20" style="min-height: 600px;">
+              <!-- ToDo 列 -->
+              <n-card
+                :title="`ToDo (${todoTasks.length})`"
+                style="width: 300px; min-height: 400px;"
+                :bordered="true"
+              >
               <template #header-extra>
                 <n-button size="small" @click="showCreateTaskDialog = true; createTaskForm.status = 'ToDo'">
                   添加任务
@@ -34,12 +47,12 @@
               </SortableContext>
             </n-card>
 
-            <!-- Doing 列 -->
-            <n-card
-              :title="`Doing (${doingTasks.length})`"
-              style="width: 300px; height: 100%;"
-              :bordered="true"
-            >
+              <!-- Doing 列 -->
+              <n-card
+                :title="`Doing (${doingTasks.length})`"
+                style="width: 300px; min-height: 400px;"
+                :bordered="true"
+              >
               <template #header-extra>
                 <n-button size="small" @click="showCreateTaskDialog = true; createTaskForm.status = 'Doing'">
                   添加任务
@@ -59,12 +72,12 @@
               </SortableContext>
             </n-card>
 
-            <!-- Done 列 -->
-            <n-card
-              :title="`Done (${doneTasks.length})`"
-              style="width: 300px; height: 100%;"
-              :bordered="true"
-            >
+              <!-- Done 列 -->
+              <n-card
+                :title="`Done (${doneTasks.length})`"
+                style="width: 300px; min-height: 400px;"
+                :bordered="true"
+              >
               <template #header-extra>
                 <n-button size="small" @click="showCreateTaskDialog = true; createTaskForm.status = 'Done'">
                   添加任务
@@ -81,10 +94,11 @@
                   :task="task"
                   style="margin-bottom: 8px;"
                 />
-              </SortableContext>
-            </n-card>
-          </n-space>
-        </DndContext>
+                </SortableContext>
+              </n-card>
+            </n-space>
+          </DndContext>
+        </n-spin>
       </n-layout-content>
     </n-layout>
 
@@ -125,7 +139,7 @@ import {
   SortableContext,
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
-import { NCard, NLayout, NLayoutContent, NSpace, useMessage, NButton, NModal, NForm, NFormItem, NInput, NInputNumber } from 'naive-ui';
+import { NCard, NLayout, NLayoutHeader, NLayoutContent, NSpace, useMessage, NButton, NModal, NForm, NFormItem, NInput, NInputNumber, NText, NSpin } from 'naive-ui';
 import { debounce } from 'lodash-es';
 import { useTaskStore } from '../stores/taskStore';
 import { useProjectStore } from '../stores/projectStore';
@@ -141,6 +155,8 @@ const message = useMessage();
 const props = defineProps<{
   id: string | number;
 }>();
+
+const loading = ref(false);
 
 const showCreateTaskDialog = ref(false);
 const createTaskForm = ref<{
@@ -330,16 +346,37 @@ const handleDragEnd = (event: DragEndEvent) => {
 };
 
 onMounted(async () => {
-  // 设置当前项目
-  const projectId = typeof props.id === 'string' ? parseInt(props.id) : props.id;
-  const projectStore = useProjectStore();
-  projectStore.setCurrentProject(projectId);
-
-  // 加载任务列表
+  loading.value = true;
   try {
+    // 设置当前项目
+    const projectId = typeof props.id === 'string' ? parseInt(props.id) : props.id;
+    
+    if (isNaN(projectId) || projectId <= 0) {
+      message.error('无效的项目ID');
+      router.push('/');
+      return;
+    }
+
+    // 确保项目列表已加载
+    if (projectStore.projects.length === 0) {
+      await projectStore.loadProjects();
+    }
+
+    projectStore.setCurrentProject(projectId);
+
+    // 加载任务列表
     await taskStore.loadTasks(projectId);
   } catch (error: any) {
+    console.error('BoardView mounted error:', error);
     message.error(error.message || '加载任务列表失败');
+    // 出错时返回首页
+    setTimeout(() => {
+      router.push('/').catch(() => {
+        console.error('Failed to navigate to home');
+      });
+    }, 1000);
+  } finally {
+    loading.value = false;
   }
 });
 </script>
@@ -348,7 +385,37 @@ onMounted(async () => {
 .board-container {
   width: 100%;
   height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.board-header {
+  padding: 0 24px;
+  height: 64px;
+  display: flex;
+  align-items: center;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.header-content {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 100%;
+}
+
+.board-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #ffffff;
 }
 </style>
+
+
+
+
+
+
 
 

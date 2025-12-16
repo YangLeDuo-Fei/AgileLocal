@@ -22,10 +22,15 @@ export const useProjectStore = defineStore('project', () => {
         loading.value = true;
         try {
             const result = await window.electronAPI.project.getAll();
+            if (result && typeof result === 'object' && 'isAppError' in result && result.isAppError) {
+                // IPC 返回了错误
+                const error = result as any;
+                throw new Error(error.message || 'Failed to load projects');
+            }
             if (result && typeof result === 'object' && 'success' in result && result.success) {
                 projects.value = (result as any).projects || [];
             } else {
-                throw new Error((result as any).message || 'Failed to load projects');
+                throw new Error('Unexpected response format');
             }
         } catch (error) {
             console.error('Failed to load projects:', error);
@@ -41,14 +46,18 @@ export const useProjectStore = defineStore('project', () => {
     async function createProject(name: string, description?: string | null): Promise<number> {
         try {
             const result = await window.electronAPI.project.create(name, description);
+            if (result && typeof result === 'object' && 'isAppError' in result && result.isAppError) {
+                // IPC 返回了错误
+                const error = result as any;
+                throw new Error(error.message || 'Failed to create project');
+            }
             if (result && typeof result === 'object' && 'success' in result && result.success) {
                 const projectId = (result as any).projectId;
                 // 重新加载项目列表
                 await loadProjects();
                 return projectId;
             } else {
-                const error = result as any;
-                throw new Error(error.message || 'Failed to create project');
+                throw new Error('Unexpected response format');
             }
         } catch (error) {
             console.error('Failed to create project:', error);
@@ -62,6 +71,11 @@ export const useProjectStore = defineStore('project', () => {
     async function deleteProject(projectId: number) {
         try {
             const result = await window.electronAPI.project.delete(projectId);
+            if (result && typeof result === 'object' && 'isAppError' in result && result.isAppError) {
+                // IPC 返回了错误
+                const error = result as any;
+                throw new Error(error.message || 'Failed to delete project');
+            }
             if (result && typeof result === 'object' && 'success' in result && result.success) {
                 // 重新加载项目列表
                 await loadProjects();
@@ -70,8 +84,7 @@ export const useProjectStore = defineStore('project', () => {
                     currentProjectId.value = null;
                 }
             } else {
-                const error = result as any;
-                throw new Error(error.message || 'Failed to delete project');
+                throw new Error('Unexpected response format');
             }
         } catch (error) {
             console.error('Failed to delete project:', error);
@@ -105,3 +118,9 @@ export const useProjectStore = defineStore('project', () => {
         setCurrentProject,
     };
 });
+
+
+
+
+
+

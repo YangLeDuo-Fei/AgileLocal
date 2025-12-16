@@ -170,6 +170,13 @@ export const useTaskStore = defineStore('task', () => {
                 return { success: false, error: result };
             }
 
+            // 检查是否是成功响应
+            if (!result || typeof result !== 'object' || !('success' in result) || !result.success) {
+                // 意外的响应格式，回滚状态
+                rollbackState();
+                return { success: false, error: { message: 'Unexpected response format' } };
+            }
+
             // 成功：version 已经在乐观更新中设置为 expectedVersion + 1
             // 如果 IPC 返回新的 version，可以更新（可选）
             if (result && typeof result === 'object' && 'newVersion' in result) {
@@ -193,10 +200,15 @@ export const useTaskStore = defineStore('task', () => {
     async function loadTasks(projectId: number, sprintId?: number | null) {
         try {
             const result = await window.electronAPI.task.getTasks(projectId, sprintId);
+            if (result && typeof result === 'object' && 'isAppError' in result && result.isAppError) {
+                // IPC 返回了错误
+                const error = result as any;
+                throw new Error(error.message || 'Failed to load tasks');
+            }
             if (result && typeof result === 'object' && 'success' in result && result.success) {
                 tasks.value = (result as any).tasks || [];
             } else {
-                throw new Error((result as any).message || 'Failed to load tasks');
+                throw new Error('Unexpected response format');
             }
         } catch (error) {
             console.error('Failed to load tasks:', error);
@@ -225,14 +237,18 @@ export const useTaskStore = defineStore('task', () => {
                 sprintId: sprintId || null,
             });
 
+            if (result && typeof result === 'object' && 'isAppError' in result && result.isAppError) {
+                // IPC 返回了错误
+                const error = result as any;
+                throw new Error(error.message || 'Failed to create task');
+            }
             if (result && typeof result === 'object' && 'success' in result && result.success) {
                 const taskId = (result as any).taskId;
                 // 重新加载任务列表
                 await loadTasks(projectId, sprintId);
                 return taskId;
             } else {
-                const error = result as any;
-                throw new Error(error.message || 'Failed to create task');
+                throw new Error('Unexpected response format');
             }
         } catch (error) {
             console.error('Failed to create task:', error);
@@ -249,5 +265,11 @@ export const useTaskStore = defineStore('task', () => {
         rollbackState,
     };
 });
+
+
+
+
+
+
 
 

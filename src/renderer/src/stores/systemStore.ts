@@ -22,10 +22,15 @@ export const useSystemStore = defineStore('system', () => {
         loading.value = true;
         try {
             const result = await window.electronAPI.system.getInfo();
+            if (result && typeof result === 'object' && 'isAppError' in result && result.isAppError) {
+                // IPC 返回了错误
+                const error = result as any;
+                throw new Error(error.message || 'Failed to load system info');
+            }
             if (result && typeof result === 'object' && 'success' in result && result.success) {
                 systemInfo.value = (result as any).info || null;
             } else {
-                throw new Error((result as any).message || 'Failed to load system info');
+                throw new Error('Unexpected response format');
             }
         } catch (error) {
             console.error('Failed to load system info:', error);
@@ -41,3 +46,9 @@ export const useSystemStore = defineStore('system', () => {
         loadSystemInfo,
     };
 });
+
+
+
+
+
+

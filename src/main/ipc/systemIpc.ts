@@ -31,11 +31,19 @@ export function registerSystemIpcHandlers(): void {
             };
         } catch (error) {
             logger.error('IPC getSystemInfo failed', error);
-            return AppError.toSerializable(
-                new AppError('500_DB_ERROR', `Failed to get system info: ${error}`)
+            const appError = new AppError(
+                '500_INTERNAL_ERROR',
+                `Failed to get system info: ${error instanceof Error ? error.message : String(error)}`
             );
+            return appError.toSerializable();
         }
     });
 
     logger.info('System IPC handlers registered');
 }
+
+
+
+
+
+

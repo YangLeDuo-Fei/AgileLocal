@@ -23,9 +23,8 @@ export function registerGitRepositoryIpcHandlers(): void {
             const validationResult = CreateRepositorySchema.safeParse(data);
             if (!validationResult.success) {
                 logger.error('IPC createRepository validation failed', validationResult.error);
-                return AppError.toSerializable(
-                    new AppError('400_INVALID_INPUT', `Invalid input: ${validationResult.error.message}`)
-                );
+                const error = new AppError('400_INVALID_INPUT', `Invalid input: ${validationResult.error.message}`);
+                return error.toSerializable();
             }
 
             const { projectId, repoUrl, token } = validationResult.data;
@@ -34,12 +33,14 @@ export function registerGitRepositoryIpcHandlers(): void {
         } catch (error) {
             if (error instanceof AppError) {
                 logger.error(`IPC createRepository failed with AppError: ${error.code}`, error.message);
-                return AppError.toSerializable(error);
+                return error.toSerializable();
             }
             logger.error('IPC createRepository failed with unknown error', error);
-            return AppError.toSerializable(
-                new AppError('500_DB_ERROR', `Failed to create repository: ${error}`)
+            const appError = new AppError(
+                '500_DB_ERROR',
+                `Failed to create repository: ${error instanceof Error ? error.message : String(error)}`
             );
+            return appError.toSerializable();
         }
     });
 
@@ -47,9 +48,8 @@ export function registerGitRepositoryIpcHandlers(): void {
     ipcMain.handle(IpcChannels.GET_REPOSITORIES, async (_event, projectId: unknown) => {
         try {
             if (typeof projectId !== 'number' || projectId <= 0) {
-                return AppError.toSerializable(
-                    new AppError('400_INVALID_INPUT', 'Invalid projectId')
-                );
+                const error = new AppError('400_INVALID_INPUT', 'Invalid projectId');
+                return error.toSerializable();
             }
 
             const repos = await GitRepositoryService.getRepositoriesByProject(projectId);
@@ -57,12 +57,14 @@ export function registerGitRepositoryIpcHandlers(): void {
         } catch (error) {
             if (error instanceof AppError) {
                 logger.error(`IPC getRepositories failed with AppError: ${error.code}`, error.message);
-                return AppError.toSerializable(error);
+                return error.toSerializable();
             }
             logger.error('IPC getRepositories failed with unknown error', error);
-            return AppError.toSerializable(
-                new AppError('500_DB_ERROR', `Failed to get repositories: ${error}`)
+            const appError = new AppError(
+                '500_DB_ERROR',
+                `Failed to get repositories: ${error instanceof Error ? error.message : String(error)}`
             );
+            return appError.toSerializable();
         }
     });
 
@@ -70,9 +72,8 @@ export function registerGitRepositoryIpcHandlers(): void {
     ipcMain.handle(IpcChannels.DELETE_REPOSITORY, async (_event, repoId: unknown) => {
         try {
             if (typeof repoId !== 'number' || repoId <= 0) {
-                return AppError.toSerializable(
-                    new AppError('400_INVALID_INPUT', 'Invalid repoId')
-                );
+                const error = new AppError('400_INVALID_INPUT', 'Invalid repoId');
+                return error.toSerializable();
             }
 
             await GitRepositoryService.deleteRepository(repoId);
@@ -80,14 +81,22 @@ export function registerGitRepositoryIpcHandlers(): void {
         } catch (error) {
             if (error instanceof AppError) {
                 logger.error(`IPC deleteRepository failed with AppError: ${error.code}`, error.message);
-                return AppError.toSerializable(error);
+                return error.toSerializable();
             }
             logger.error('IPC deleteRepository failed with unknown error', error);
-            return AppError.toSerializable(
-                new AppError('500_DB_ERROR', `Failed to delete repository: ${error}`)
+            const appError = new AppError(
+                '500_DB_ERROR',
+                `Failed to delete repository: ${error instanceof Error ? error.message : String(error)}`
             );
+            return appError.toSerializable();
         }
     });
 
     logger.info('Git Repository IPC handlers registered');
 }
+
+
+
+
+
+

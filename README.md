@@ -41,9 +41,10 @@ npm run build
 
 ### 打包要求
 
-- Node.js 20+
+- Node.js 20.x LTS（推荐 20.19.6）
+- npm 10+
 - Windows 10/11（64位）
-- Visual Studio Build Tools（用于编译原生模块）
+- Visual Studio Build Tools 2026（用于编译原生模块，需安装 "Desktop development with C++" 工作负载）
 
 ---
 

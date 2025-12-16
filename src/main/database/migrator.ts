@@ -3,7 +3,7 @@
 
 import { FileMigrationProvider, Migrator } from 'kysely';
 import { promises as fs } from 'fs';
-import { join } from 'path';
+import path, { join } from 'path';
 import { app } from 'electron';
 import { getDatabase } from './connection';
 import logger from '../utils/logger';
@@ -17,17 +17,51 @@ export async function runMigrations(): Promise<void> {
         const db = await getDatabase();
         
         // 获取迁移文件目录路径
-        // 开发模式：使用源码目录
+        // 开发模式：直接从源码目录读取（electron-vite 不复制文件）
         // 生产模式：使用打包后的目录
-        const migrationsPath = app.isPackaged
-            ? join(process.resourcesPath, 'app.asar.unpacked', 'src', 'main', 'database', 'migrations')
-            : join(__dirname, 'migrations');
+        let migrationsPath: string;
+        if (app.isPackaged) {
+            migrationsPath = join(process.resourcesPath, 'app.asar.unpacked', 'src', 'main', 'database', 'migrations');
+        } else {
+            // 开发模式：从源码目录读取
+            // 尝试多种路径解析方式
+            const possiblePaths = [
+                // 方式1: 从 app.getAppPath() 解析（通常是项目根目录）
+                join(app.getAppPath(), 'src', 'main', 'database', 'migrations'),
+                // 方式2: 从 __dirname 向上解析到项目根目录
+                join(__dirname, '..', '..', '..', 'src', 'main', 'database', 'migrations'),
+                // 方式3: 从 process.cwd() 解析（当前工作目录）
+                join(process.cwd(), 'src', 'main', 'database', 'migrations'),
+            ];
+            
+            // 找到第一个存在的路径
+            let found = false;
+            for (const path of possiblePaths) {
+                try {
+                    await fs.access(path);
+                    migrationsPath = path;
+                    found = true;
+                    logger.info(`Found migrations path: ${path}`);
+                    break;
+                } catch {
+                    // 继续尝试下一个路径
+                }
+            }
+            
+            if (!found) {
+                const errorMsg = `Migrations directory not found. Tried: ${possiblePaths.join(', ')}`;
+                logger.error(errorMsg);
+                throw new AppError('500_DB_ERROR', errorMsg);
+            }
+        }
+
+        logger.info(`Using migrations path: ${migrationsPath}`);
 
         const migrator = new Migrator({
             db,
             provider: new FileMigrationProvider({
                 fs,
-                path: migrationsPath,
+                path: path,
                 migrationFolder: migrationsPath,
             }),
         });
@@ -69,15 +103,45 @@ export async function rollbackLastMigration(): Promise<void> {
         const db = await getDatabase();
         
         // 获取迁移文件目录路径
-        const migrationsPath = app.isPackaged
-            ? join(process.resourcesPath, 'app.asar.unpacked', 'src', 'main', 'database', 'migrations')
-            : join(__dirname, 'migrations');
+        // 开发模式：直接从源码目录读取（electron-vite 不复制文件）
+        // 生产模式：使用打包后的目录
+        let migrationsPath: string;
+        if (app.isPackaged) {
+            migrationsPath = join(process.resourcesPath, 'app.asar.unpacked', 'src', 'main', 'database', 'migrations');
+        } else {
+            // 开发模式：从源码目录读取（使用与 runMigrations 相同的逻辑）
+            const possiblePaths = [
+                join(app.getAppPath(), 'src', 'main', 'database', 'migrations'),
+                join(__dirname, '..', '..', '..', 'src', 'main', 'database', 'migrations'),
+                join(process.cwd(), 'src', 'main', 'database', 'migrations'),
+            ];
+            
+            let found = false;
+            for (const path of possiblePaths) {
+                try {
+                    await fs.access(path);
+                    migrationsPath = path;
+                    found = true;
+                    break;
+                } catch {
+                    // 继续尝试下一个路径
+                }
+            }
+            
+            if (!found) {
+                const errorMsg = `Migrations directory not found. Tried: ${possiblePaths.join(', ')}`;
+                logger.error(errorMsg);
+                throw new AppError('500_DB_ERROR', errorMsg);
+            }
+        }
+
+        logger.info(`Using migrations path (rollback): ${migrationsPath}`);
 
         const migrator = new Migrator({
             db,
             provider: new FileMigrationProvider({
                 fs,
-                path: migrationsPath,
+                path: path,
                 migrationFolder: migrationsPath,
             }),
         });

@@ -33,4 +33,20 @@ const router = createRouter({
     ],
 });
 
+// 路由守卫：捕获路由错误
+router.beforeEach((to, from, next) => {
+    try {
+        next();
+    } catch (error) {
+        console.error('Router beforeEach error:', error);
+        next('/');
+    }
+});
+
 export default router;
+
+
+
+
+
+

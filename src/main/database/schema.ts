@@ -77,7 +77,7 @@ export interface UsersTable { // 用户表 (8/8)
   id: Generated<number>;
   username: string;
   email: string;
-  password_hash: string; // 必须使用 bcrypt 存储
+  password_hash: string; // 必须使用 bcryptjs 存储
   role: 'admin' | 'user'; // 权限字段
 }
 

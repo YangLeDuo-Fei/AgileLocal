@@ -70,9 +70,8 @@ export function registerTaskIpcHandlers(): void {
             const validationResult = CreateTaskSchema.safeParse(data);
             if (!validationResult.success) {
                 logger.error('IPC createTask validation failed', validationResult.error);
-                return AppError.toSerializable(
-                    new AppError('400_INVALID_INPUT', `Invalid input: ${validationResult.error.message}`)
-                );
+                const error = new AppError('400_INVALID_INPUT', `Invalid input: ${validationResult.error.message}`);
+                return error.toSerializable();
             }
 
             const { projectId, title, description, storyPoints, status, sprintId } = validationResult.data;
@@ -81,12 +80,14 @@ export function registerTaskIpcHandlers(): void {
         } catch (error) {
             if (error instanceof AppError) {
                 logger.error(`IPC createTask failed with AppError: ${error.code}`, error.message);
-                return AppError.toSerializable(error);
+                return error.toSerializable();
             }
             logger.error('IPC createTask failed with unknown error', error);
-            return AppError.toSerializable(
-                new AppError('500_DB_ERROR', `Failed to create task: ${error}`)
+            const appError = new AppError(
+                '500_DB_ERROR',
+                `Failed to create task: ${error instanceof Error ? error.message : String(error)}`
             );
+            return appError.toSerializable();
         }
     });
 
@@ -101,9 +102,8 @@ export function registerTaskIpcHandlers(): void {
             const validationResult = GetTasksSchema.safeParse(data);
             if (!validationResult.success) {
                 logger.error('IPC getTasks validation failed', validationResult.error);
-                return AppError.toSerializable(
-                    new AppError('400_INVALID_INPUT', `Invalid input: ${validationResult.error.message}`)
-                );
+                const error = new AppError('400_INVALID_INPUT', `Invalid input: ${validationResult.error.message}`);
+                return error.toSerializable();
             }
 
             const { projectId, sprintId } = validationResult.data;
@@ -112,16 +112,24 @@ export function registerTaskIpcHandlers(): void {
         } catch (error) {
             if (error instanceof AppError) {
                 logger.error(`IPC getTasks failed with AppError: ${error.code}`, error.message);
-                return AppError.toSerializable(error);
+                return error.toSerializable();
             }
             logger.error('IPC getTasks failed with unknown error', error);
-            return AppError.toSerializable(
-                new AppError('500_DB_ERROR', `Failed to get tasks: ${error}`)
+            const appError = new AppError(
+                '500_DB_ERROR',
+                `Failed to get tasks: ${error instanceof Error ? error.message : String(error)}`
             );
+            return appError.toSerializable();
         }
     });
 
     logger.info('Task IPC handlers registered');
 }
+
+
+
+
+
+
 
 

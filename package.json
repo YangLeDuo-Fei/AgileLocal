@@ -32,6 +32,7 @@
     "node-schedule": "^2.1.1",
     "pinia": "^3.0.4",
     "pinia-plugin-persistedstate": "^4.7.1",
+    "sortablejs": "^1.15.6",
     "vue": "^3.5.25",
     "vue-draggable-next": "^2.3.0",
     "vue-router": "^4.5.0",

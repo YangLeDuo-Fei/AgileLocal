@@ -8,12 +8,18 @@ export interface Project {
     name: string;
     description: string | null;
     created_at: string;
+    has_password?: number; // SQLite boolean (0/1)
+    encrypted_password?: string | null;
+    password_salt?: string | null;
+    password_iv?: string | null;
 }
 
 export const useProjectStore = defineStore('project', () => {
     const projects = ref<Project[]>([]);
     const currentProjectId = ref<number | null>(null);
     const loading = ref(false);
+    // 已通过密码验证的项目ID集合（会话级别，不持久化）
+    const verifiedProjectIds = ref<Set<number>>(new Set());
 
     /**
      * 加载所有项目
@@ -100,6 +106,27 @@ export const useProjectStore = defineStore('project', () => {
     }
 
     /**
+     * 标记项目已通过密码验证
+     */
+    function markProjectVerified(projectId: number) {
+        verifiedProjectIds.value.add(projectId);
+    }
+
+    /**
+     * 检查项目是否已通过密码验证
+     */
+    function isProjectVerified(projectId: number): boolean {
+        return verifiedProjectIds.value.has(projectId);
+    }
+
+    /**
+     * 清除项目的验证状态（用于密码更改后）
+     */
+    function clearProjectVerification(projectId: number) {
+        verifiedProjectIds.value.delete(projectId);
+    }
+
+    /**
      * 获取当前项目
      */
     const currentProject = computed(() => {
@@ -116,8 +143,15 @@ export const useProjectStore = defineStore('project', () => {
         createProject,
         deleteProject,
         setCurrentProject,
+        markProjectVerified,
+        isProjectVerified,
+        clearProjectVerification,
     };
 });
+
+
+
+
 
 
 

@@ -8,6 +8,7 @@ import SettingsView from '../views/SettingsView.vue';
 import StatisticsView from '../views/StatisticsView.vue';
 import PasswordSetupView from '../views/PasswordSetupView.vue';
 import PasswordVerifyView from '../views/PasswordVerifyView.vue';
+import SprintManagementView from '../views/SprintManagementView.vue';
 
 const router = createRouter({
     history: createWebHashHistory(),
@@ -21,6 +22,12 @@ const router = createRouter({
             path: '/project/:id/board',
             name: 'board',
             component: BoardView,
+            props: true,
+        },
+        {
+            path: '/project/:id/sprints',
+            name: 'sprints',
+            component: SprintManagementView,
             props: true,
         },
         {
@@ -62,6 +69,10 @@ router.beforeEach((to, from, next) => {
 });
 
 export default router;
+
+
+
+
 
 
 

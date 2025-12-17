@@ -17,11 +17,21 @@ const IpcChannels = {
     GET_PROJECTS: 'project:getProjects',
     DELETE_PROJECT: 'project:delete',
     
+    // Sprint 相关
+    CREATE_SPRINT: 'sprint:create',
+    GET_SPRINTS: 'sprint:getSprints',
+    GET_SPRINT: 'sprint:getSprint',
+    UPDATE_SPRINT: 'sprint:update',
+    DELETE_SPRINT: 'sprint:delete',
+    
     // Git 相关
     SYNC_GIT: 'git:sync',
     CREATE_REPOSITORY: 'git:createRepository',
     GET_REPOSITORIES: 'git:getRepositories',
     DELETE_REPOSITORY: 'git:deleteRepository',
+    GET_COMMITS_BY_REPOSITORY: 'git:getCommitsByRepository',
+    GET_COMMITS_BY_PROJECT: 'git:getCommitsByProject',
+    GET_RECENTLY_CLOSED_TASKS: 'git:getRecentlyClosedTasks',
     
     // 系统相关
     GET_SYSTEM_INFO: 'system:getInfo',
@@ -32,6 +42,14 @@ const IpcChannels = {
     CHECK_MASTER_PASSWORD_REQUIRED: 'password:checkRequired',
     SET_MASTER_PASSWORD: 'password:set',
     VERIFY_MASTER_PASSWORD: 'password:verify',
+    
+    // 导出相关
+    EXPORT_PROJECT_REPORT_MARKDOWN: 'export:projectReportMarkdown',
+    
+    // 项目密码相关
+    SET_PROJECT_PASSWORD: 'project:setPassword',
+    VERIFY_PROJECT_PASSWORD: 'project:verifyPassword',
+    REMOVE_PROJECT_PASSWORD: 'project:removePassword',
 } as const;
 
 // 安全暴露 API 到渲染进程
@@ -94,6 +112,45 @@ contextBridge.exposeInMainWorld('electronAPI', {
         delete: async (projectId: number) => {
             return await ipcRenderer.invoke(IpcChannels.DELETE_PROJECT, projectId);
         },
+        setPassword: async (projectId: number, password: string) => {
+            return await ipcRenderer.invoke(IpcChannels.SET_PROJECT_PASSWORD, { projectId, password });
+        },
+        verifyPassword: async (projectId: number, password: string) => {
+            return await ipcRenderer.invoke(IpcChannels.VERIFY_PROJECT_PASSWORD, { projectId, password });
+        },
+        removePassword: async (projectId: number) => {
+            return await ipcRenderer.invoke(IpcChannels.REMOVE_PROJECT_PASSWORD, { projectId });
+        },
+    },
+    // Sprint 模块
+    sprint: {
+        create: async (data: {
+            projectId: number;
+            name: string;
+            startDate: string;
+            endDate: string;
+            status?: 'Planned' | 'Active' | 'Closed';
+        }) => {
+            return await ipcRenderer.invoke(IpcChannels.CREATE_SPRINT, data);
+        },
+        getSprints: async (projectId: number) => {
+            return await ipcRenderer.invoke(IpcChannels.GET_SPRINTS, { projectId });
+        },
+        getSprint: async (sprintId: number) => {
+            return await ipcRenderer.invoke(IpcChannels.GET_SPRINT, { sprintId });
+        },
+        update: async (data: {
+            sprintId: number;
+            name?: string;
+            startDate?: string;
+            endDate?: string;
+            status?: 'Planned' | 'Active' | 'Closed';
+        }) => {
+            return await ipcRenderer.invoke(IpcChannels.UPDATE_SPRINT, data);
+        },
+        delete: async (sprintId: number) => {
+            return await ipcRenderer.invoke(IpcChannels.DELETE_SPRINT, { sprintId });
+        },
     },
     // Git 模块
     git: {
@@ -112,6 +169,21 @@ contextBridge.exposeInMainWorld('electronAPI', {
         },
         deleteRepository: async (repoId: number) => {
             return await ipcRenderer.invoke(IpcChannels.DELETE_REPOSITORY, repoId);
+        },
+        getCommitsByRepository: async (repoId: number, limit?: number) => {
+            return await ipcRenderer.invoke(IpcChannels.GET_COMMITS_BY_REPOSITORY, { repoId, limit });
+        },
+        getCommitsByProject: async (projectId: number, limit?: number) => {
+            return await ipcRenderer.invoke(IpcChannels.GET_COMMITS_BY_PROJECT, { projectId, limit });
+        },
+        getRecentlyClosedTasks: async (projectId: number, limit?: number) => {
+            return await ipcRenderer.invoke(IpcChannels.GET_RECENTLY_CLOSED_TASKS, { projectId, limit });
+        },
+    },
+    // 导出模块
+    export: {
+        exportProjectReportMarkdown: async (projectId: number) => {
+            return await ipcRenderer.invoke(IpcChannels.EXPORT_PROJECT_REPORT_MARKDOWN, { projectId });
         },
     },
     // 系统模块

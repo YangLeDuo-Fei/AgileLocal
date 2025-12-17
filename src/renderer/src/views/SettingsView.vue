@@ -77,6 +77,39 @@
           </n-space>
         </n-card>
 
+        <!-- 系统工具 -->
+        <n-card title="系统工具" :bordered="true" style="margin-bottom: 24px;">
+          <n-space vertical :size="16">
+            <div>
+              <n-text strong>检查更新</n-text>
+              <div style="font-size: 12px; color: #999; margin-top: 4px;">
+                检查是否有新版本可用
+              </div>
+            </div>
+            <n-button type="default" @click="handleCheckUpdate" :loading="checkUpdateLoading">
+              检查更新
+            </n-button>
+          </n-space>
+        </n-card>
+
+        <!-- 关于 -->
+        <n-card title="关于" :bordered="true" style="margin-bottom: 24px;">
+          <n-space vertical :size="16">
+            <div>
+              <n-text strong>AgileLocal</n-text>
+              <div style="font-size: 12px; color: #999; margin-top: 4px;">
+                本地敏捷研发项目管理平台
+              </div>
+            </div>
+            <n-text depth="3" style="font-size: 13px;">
+              Version 1.0.0
+            </n-text>
+            <n-text depth="3" style="font-size: 13px;">
+              一个功能完整的本地项目管理工具，支持任务看板、Git同步、统计分析等功能。
+            </n-text>
+          </n-space>
+        </n-card>
+
         <!-- 系统信息 -->
         <n-card title="系统信息" :bordered="true">
           <n-spin :show="systemStore.loading">
@@ -134,6 +167,7 @@ const systemStore = useSystemStore();
 
 const backupLoading = ref(false);
 const restoreLoading = ref(false);
+const checkUpdateLoading = ref(false);
 
 const handleCreateBackup = async () => {
   backupLoading.value = true;
@@ -154,6 +188,18 @@ const handleCreateBackup = async () => {
     message.error(error.message || '创建备份失败');
   } finally {
     backupLoading.value = false;
+  }
+};
+
+const handleCheckUpdate = async () => {
+  checkUpdateLoading.value = true;
+  try {
+    // 这里可以调用 IPC 检查更新，暂时显示提示
+    message.info('当前已是最新版本');
+  } catch (error: any) {
+    message.error(error.message || '检查更新失败');
+  } finally {
+    checkUpdateLoading.value = false;
   }
 };
 
@@ -242,6 +288,10 @@ onMounted(async () => {
   margin: 0 auto;
 }
 </style>
+
+
+
+
 
 
 

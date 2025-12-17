@@ -90,3 +90,7 @@ export function registerPasswordIpcHandlers(): void {
 
     logger.info('Password IPC handlers registered');
 }
+
+
+
+

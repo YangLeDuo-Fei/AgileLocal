@@ -66,6 +66,57 @@
           </n-spin>
         </n-card>
 
+        <!-- 最近关闭的任务 -->
+        <n-card title="最近关闭的任务" :bordered="true" style="margin-top: 24px;">
+          <n-spin :show="loadingClosedTasks">
+            <n-list v-if="recentlyClosedTasks.length > 0">
+              <n-list-item v-for="item in recentlyClosedTasks" :key="item.commit_id">
+                <div class="closed-task-item">
+                  <div class="closed-task-header">
+                    <n-text strong class="closed-task-title">任务 #{{ item.task_id }}: {{ item.task_title }}</n-text>
+                    <n-tag size="small" type="success">已关闭</n-tag>
+                  </div>
+                  <div class="closed-task-details">
+                    <n-text depth="3" style="font-size: 12px;">
+                      {{ formatCommitMessage(item.commit_message) }}
+                    </n-text>
+                  </div>
+                  <div class="closed-task-footer">
+                    <n-text depth="3" style="font-size: 11px;">
+                      提交：{{ formatCommitSha(item.commit_sha) }} · {{ formatCommitTime(item.committed_at) }}
+                      <span v-if="item.repo_url"> · {{ item.repo_url }}</span>
+                    </n-text>
+                  </div>
+                </div>
+              </n-list-item>
+            </n-list>
+            <n-empty v-else description="暂无关闭的任务" size="small" />
+          </n-spin>
+        </n-card>
+
+        <!-- 提交历史 -->
+        <n-card title="提交历史" :bordered="true" style="margin-top: 24px;">
+          <n-spin :show="loadingCommits">
+            <n-list v-if="commitHistory.length > 0">
+              <n-list-item v-for="commit in commitHistory" :key="commit.id">
+                <div class="commit-item">
+                  <div class="commit-header">
+                    <n-text strong class="commit-message">{{ formatCommitMessage(commit.message) }}</n-text>
+                    <n-tag v-if="commit.task_id" size="small" type="info">任务 #{{ commit.task_id }}</n-tag>
+                  </div>
+                  <div class="commit-footer">
+                    <n-text depth="3" style="font-size: 11px;">
+                      {{ formatCommitSha(commit.commit_sha) }} · {{ formatCommitTime(commit.committed_at) }}
+                      <span v-if="commit.repo_url"> · {{ commit.repo_url }}</span>
+                    </n-text>
+                  </div>
+                </div>
+              </n-list-item>
+            </n-list>
+            <n-empty v-else description="暂无提交记录" size="small" />
+          </n-spin>
+        </n-card>
+
         <!-- 同步日志 -->
         <n-card title="同步日志" :bordered="true" style="margin-top: 24px;">
           <n-space vertical :size="12">
@@ -140,6 +191,14 @@ const createRepoForm = ref({
   token: '',
 });
 
+// 最近关闭的任务
+const recentlyClosedTasks = ref<any[]>([]);
+const loadingClosedTasks = ref(false);
+
+// 提交历史
+const commitHistory = ref<any[]>([]);
+const loadingCommits = ref(false);
+
 const handleCreateRepo = async () => {
   if (!createRepoForm.value.repoUrl.trim() || !createRepoForm.value.token.trim()) {
     message.error('请填写仓库 URL 和 Token');
@@ -210,20 +269,27 @@ const handleSync = async (repoId: number) => {
     const result = await window.electronAPI.git.sync();
     if (result && typeof result === 'object' && 'isAppError' in result && result.isAppError) {
       const error = result as any;
-      addSyncLog('error', `同步失败: ${error.message || '未知错误'}`);
-      message.error(error.message || '同步失败');
+      // 显示详细错误信息（包括完整错误对象）
+      const errorDetails = error.details || error.stack || error.message || JSON.stringify(error);
+      addSyncLog('error', `同步失败: ${errorDetails}`);
+      message.error(`同步失败: ${error.message || '未知错误'}`, { duration: 5000 });
       return;
     }
     if (result && typeof result === 'object' && 'success' in result && result.success) {
       addSyncLog('success', '同步成功');
       message.success('同步成功');
       await loadRepositories();
+      // 同步成功后重新加载提交历史和关闭的任务
+      await loadCommitHistory();
+      await loadRecentlyClosedTasks();
     } else {
       throw new Error('Unexpected response format');
     }
   } catch (error: any) {
-    addSyncLog('error', `同步失败: ${error.message || '未知错误'}`);
-    message.error(error.message || '同步失败');
+    // 显示详细错误信息
+    const errorDetails = error.stack || error.message || String(error);
+    addSyncLog('error', `同步失败: ${errorDetails}`);
+    message.error(`同步失败: ${error.message || '未知错误'}`, { duration: 5000 });
   } finally {
     syncing.value = false;
     syncingRepoId.value = null;
@@ -270,6 +336,70 @@ const formatTime = (time: Date): string => {
   return time.toLocaleString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 };
 
+// 格式化提交消息（取第一行）
+const formatCommitMessage = (message: string): string => {
+  return message.split('\n')[0].trim();
+};
+
+// 格式化提交时间
+const formatCommitTime = (timeStr: string): string => {
+  const time = new Date(timeStr);
+  const now = new Date();
+  const diff = now.getTime() - time.getTime();
+  const seconds = Math.floor(diff / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  const days = Math.floor(hours / 24);
+  
+  if (seconds < 60) return `${seconds}秒前`;
+  if (minutes < 60) return `${minutes}分钟前`;
+  if (hours < 24) return `${hours}小时前`;
+  if (days < 7) return `${days}天前`;
+  return time.toLocaleDateString('zh-CN', { month: 'short', day: 'numeric', year: time.getFullYear() !== now.getFullYear() ? 'numeric' : undefined });
+};
+
+// 加载最近关闭的任务
+const loadRecentlyClosedTasks = async () => {
+  if (!projectStore.currentProjectId) return;
+
+  loadingClosedTasks.value = true;
+  try {
+    const result = await window.electronAPI.git.getRecentlyClosedTasks(projectStore.currentProjectId, 20);
+    if (result && typeof result === 'object' && 'isAppError' in result && result.isAppError) {
+      const error = result as any;
+      throw new Error(error.message || '加载失败');
+    }
+    if (result && typeof result === 'object' && 'success' in result && result.success) {
+      recentlyClosedTasks.value = (result as any).closedTasks || [];
+    }
+  } catch (error: any) {
+    console.error('Failed to load recently closed tasks:', error);
+  } finally {
+    loadingClosedTasks.value = false;
+  }
+};
+
+// 加载提交历史
+const loadCommitHistory = async () => {
+  if (!projectStore.currentProjectId) return;
+
+  loadingCommits.value = true;
+  try {
+    const result = await window.electronAPI.git.getCommitsByProject(projectStore.currentProjectId, 50);
+    if (result && typeof result === 'object' && 'isAppError' in result && result.isAppError) {
+      const error = result as any;
+      throw new Error(error.message || '加载失败');
+    }
+    if (result && typeof result === 'object' && 'success' in result && result.success) {
+      commitHistory.value = (result as any).commits || [];
+    }
+  } catch (error: any) {
+    console.error('Failed to load commit history:', error);
+  } finally {
+    loadingCommits.value = false;
+  }
+};
+
 const handleDeleteRepo = async (repoId: number) => {
   try {
     const result = await window.electronAPI.git.deleteRepository(repoId);
@@ -300,6 +430,8 @@ onMounted(async () => {
     }
   }
   await loadRepositories();
+  await loadCommitHistory();
+  await loadRecentlyClosedTasks();
 });
 </script>
 
@@ -344,7 +476,79 @@ onMounted(async () => {
   max-width: 1200px;
   margin: 0 auto;
 }
+
+/* 关闭的任务项样式 */
+.closed-task-item {
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+body.dark .closed-task-item,
+html.dark .closed-task-item {
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+.closed-task-item:last-child {
+  border-bottom: none;
+}
+
+.closed-task-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.closed-task-title {
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.closed-task-details {
+  margin-bottom: 6px;
+}
+
+.closed-task-footer {
+  display: flex;
+  align-items: center;
+}
+
+/* 提交项样式 */
+.commit-item {
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05);
+}
+
+body.dark .commit-item,
+html.dark .commit-item {
+  border-bottom-color: rgba(255, 255, 255, 0.1);
+}
+
+.commit-item:last-child {
+  border-bottom: none;
+}
+
+.commit-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.commit-message {
+  font-size: 14px;
+  flex: 1;
+}
+
+.commit-footer {
+  display: flex;
+  align-items: center;
+}
 </style>
+
+
+
+
 
 
 

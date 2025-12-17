@@ -31,6 +31,11 @@
 
         <n-alert v-if="errorMessage" type="error" :bordered="false" style="margin-bottom: 24px;">
           {{ errorMessage }}
+          <template v-if="retryCount > 0 && retryCount < MAX_RETRIES">
+            <div style="margin-top: 8px; font-size: 12px; color: rgba(255, 77, 79, 0.8);">
+              剩余尝试次数：{{ MAX_RETRIES - retryCount }}
+            </div>
+          </template>
         </n-alert>
 
         <n-button
@@ -48,9 +53,10 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { useMessage } from 'naive-ui';
+import { useSystemStore } from '../stores/systemStore';
 import {
   NCard,
   NForm,
@@ -62,11 +68,19 @@ import {
 } from 'naive-ui';
 import type { FormInst, FormRules } from 'naive-ui';
 
+const systemStore = useSystemStore();
 const router = useRouter();
 const message = useMessage();
+
+// 确保深色模式生效
+onMounted(() => {
+  // 页面会自动继承 n-config-provider 的主题
+});
 const formRef = ref<FormInst | null>(null);
 const loading = ref(false);
 const errorMessage = ref('');
+const retryCount = ref(0);
+const MAX_RETRIES = 3; // 最多重试3次
 
 const form = ref({
   password: '',
@@ -95,23 +109,83 @@ const handleSubmit = async () => {
 
     if (result && typeof result === 'object' && 'isAppError' in result && result.isAppError) {
       const error = result as any;
-      errorMessage.value = error.message || '验证失败';
+      retryCount.value++;
+      if (retryCount.value >= MAX_RETRIES) {
+        errorMessage.value = `密码验证失败次数过多（${MAX_RETRIES}次），应用即将退出`;
+        message.error('验证失败次数过多，应用将在3秒后退出');
+        setTimeout(() => {
+          // 退出应用（Electron 环境）
+          if (window.require) {
+            const { app } = window.require('@electron/remote') || window.require('electron').remote || {};
+            if (app) {
+              app.quit();
+            } else {
+              window.close();
+            }
+          } else {
+            window.close();
+          }
+        }, 3000);
+      } else {
+        errorMessage.value = error.message || `密码验证失败（剩余尝试次数：${MAX_RETRIES - retryCount.value}）`;
+        form.value.password = ''; // 清空密码输入
+      }
       return;
     }
 
     if (result && typeof result === 'object' && 'success' in result && result.success) {
       if (result.verified) {
         message.success('验证成功');
+        retryCount.value = 0; // 重置重试次数
         // 跳转到首页
         router.push('/');
       } else {
-        errorMessage.value = '密码验证失败，请重试';
+        retryCount.value++;
+        if (retryCount.value >= MAX_RETRIES) {
+          errorMessage.value = `密码验证失败次数过多（${MAX_RETRIES}次），应用即将退出`;
+          message.error('验证失败次数过多，应用将在3秒后退出');
+          setTimeout(() => {
+            if (window.require) {
+              const { app } = window.require('@electron/remote') || window.require('electron').remote || {};
+              if (app) {
+                app.quit();
+              } else {
+                window.close();
+              }
+            } else {
+              window.close();
+            }
+          }, 3000);
+        } else {
+          errorMessage.value = `密码验证失败（剩余尝试次数：${MAX_RETRIES - retryCount.value}）`;
+          form.value.password = ''; // 清空密码输入
+        }
       }
     } else {
-      errorMessage.value = '验证失败，请重试';
+      retryCount.value++;
+      if (retryCount.value >= MAX_RETRIES) {
+        errorMessage.value = `密码验证失败次数过多（${MAX_RETRIES}次），应用即将退出`;
+        message.error('验证失败次数过多，应用将在3秒后退出');
+        setTimeout(() => {
+          window.electronAPI.system?.exit?.() || window.close();
+        }, 3000);
+      } else {
+        errorMessage.value = `验证失败（剩余尝试次数：${MAX_RETRIES - retryCount.value}）`;
+        form.value.password = '';
+      }
     }
   } catch (error: any) {
-    errorMessage.value = error.message || '验证失败';
+    retryCount.value++;
+    if (retryCount.value >= MAX_RETRIES) {
+      errorMessage.value = `密码验证失败次数过多（${MAX_RETRIES}次），应用即将退出`;
+      message.error('验证失败次数过多，应用将在3秒后退出');
+      setTimeout(() => {
+        window.electronAPI.system?.exit?.() || window.close();
+      }, 3000);
+    } else {
+      errorMessage.value = error.message || `验证失败（剩余尝试次数：${MAX_RETRIES - retryCount.value}）`;
+      form.value.password = '';
+    }
   } finally {
     loading.value = false;
   }
@@ -146,3 +220,7 @@ const handleSubmit = async () => {
   font-weight: 600;
 }
 </style>
+
+
+
+

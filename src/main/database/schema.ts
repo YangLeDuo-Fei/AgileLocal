@@ -8,6 +8,10 @@ export interface ProjectsTable { // 项目表 (1/8)
   name: string;
   description: string | null;
   created_at: string;
+  has_password: number; // SQLite boolean (0/1)
+  encrypted_password: string | null;
+  password_salt: string | null;
+  password_iv: string | null;
 }
 
 export interface SprintsTable { // 冲刺表 (2/8)

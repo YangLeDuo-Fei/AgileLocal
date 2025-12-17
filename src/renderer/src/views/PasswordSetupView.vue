@@ -66,9 +66,6 @@
 import { ref } from 'vue';
 import { useRouter } from 'vue-router';
 import { useMessage } from 'naive-ui';
-import { useSystemStore } from '../stores/systemStore';
-
-const systemStore = useSystemStore();
 import {
   NCard,
   NForm,
@@ -170,3 +167,7 @@ const handleSubmit = async () => {
   font-weight: 600;
 }
 </style>
+
+
+
+

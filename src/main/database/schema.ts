@@ -29,6 +29,9 @@ export interface TasksTable { // 任务表 (3/8) - 核心表
   kanban_order: number; // 看板排序字段 (用于拖拽排序)
   version: number; // 乐观锁字段，默认值 1
   description: string | null;
+  assignee: string | null; // 负责人
+  due_date: string | null; // 截止日期（ISO 格式）
+  priority: number; // 优先级：1高、2中、3低，默认2
   created_at: string;
   updated_at: string;
   // 索引与外键约束 (在迁移脚本中实现):

@@ -4,6 +4,8 @@
 export const IpcChannels = {
     // 任务相关
     UPDATE_TASK_STATUS: 'task:updateStatus',
+    UPDATE_TASK: 'task:update',
+    DELETE_TASK: 'task:delete',
     CREATE_TASK: 'task:create',
     GET_TASKS: 'task:getTasks',
     
@@ -20,7 +22,15 @@ export const IpcChannels = {
     
     // 系统相关
     GET_SYSTEM_INFO: 'system:getInfo',
+    CREATE_BACKUP: 'system:createBackup',
+    RESTORE_BACKUP: 'system:restoreBackup',
+    
+    // 主密码相关
+    CHECK_MASTER_PASSWORD_REQUIRED: 'password:checkRequired',
+    SET_MASTER_PASSWORD: 'password:set',
+    VERIFY_MASTER_PASSWORD: 'password:verify',
 } as const;
+
 
 
 

@@ -36,9 +36,23 @@ export class KeyManager {
 
         // 检查是否已存在加密密钥文件
         if (existsSync(this.secretsPath)) {
-            this.dbKey = await this.loadDbKey();
+            try {
+                this.dbKey = await this.loadDbKey();
+            } catch (error) {
+                // 如果 loadDbKey 失败（可能是因为需要主密码），抛出错误
+                // 让调用者知道需要通过 UI 获取主密码
+                throw error;
+            }
         } else {
-            this.dbKey = await this.generateAndStoreDbKey();
+            // 密钥文件不存在，检查 safeStorage 是否可用
+            if (safeStorage.isEncryptionAvailable()) {
+                // 使用 safeStorage 生成并存储
+                this.dbKey = await this.generateAndStoreDbKey();
+            } else {
+                // safeStorage 不可用，需要主密码
+                // 这里不直接抛出错误，而是抛出特殊错误，让调用者知道需要通过 UI 设置主密码
+                throw new Error('Master password required. Please set a master password (min 12 characters) through the UI.');
+            }
         }
 
         return this.dbKey;

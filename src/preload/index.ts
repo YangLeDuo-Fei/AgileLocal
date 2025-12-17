@@ -7,6 +7,8 @@ import { contextBridge, ipcRenderer } from 'electron';
 const IpcChannels = {
     // 任务相关
     UPDATE_TASK_STATUS: 'task:updateStatus',
+    UPDATE_TASK: 'task:update',
+    DELETE_TASK: 'task:delete',
     CREATE_TASK: 'task:create',
     GET_TASKS: 'task:getTasks',
     
@@ -23,6 +25,13 @@ const IpcChannels = {
     
     // 系统相关
     GET_SYSTEM_INFO: 'system:getInfo',
+    CREATE_BACKUP: 'system:createBackup',
+    RESTORE_BACKUP: 'system:restoreBackup',
+    
+    // 主密码相关
+    CHECK_MASTER_PASSWORD_REQUIRED: 'password:checkRequired',
+    SET_MASTER_PASSWORD: 'password:set',
+    VERIFY_MASTER_PASSWORD: 'password:verify',
 } as const;
 
 // 安全暴露 API 到渲染进程
@@ -49,11 +58,29 @@ contextBridge.exposeInMainWorld('electronAPI', {
             storyPoints?: number;
             status?: 'ToDo' | 'Doing' | 'Done';
             sprintId?: number | null;
+            assignee?: string | null;
+            dueDate?: string | null;
+            priority?: number;
         }) => {
             return await ipcRenderer.invoke(IpcChannels.CREATE_TASK, data);
         },
         getTasks: async (projectId: number, sprintId?: number | null) => {
             return await ipcRenderer.invoke(IpcChannels.GET_TASKS, { projectId, sprintId });
+        },
+        update: async (data: {
+            taskId: number;
+            title?: string;
+            description?: string | null;
+            storyPoints?: number;
+            status?: 'ToDo' | 'Doing' | 'Done';
+            assignee?: string | null;
+            dueDate?: string | null;
+            priority?: number;
+        }) => {
+            return await ipcRenderer.invoke(IpcChannels.UPDATE_TASK, data);
+        },
+        delete: async (taskId: number) => {
+            return await ipcRenderer.invoke(IpcChannels.DELETE_TASK, { taskId });
         },
     },
     // 项目模块
@@ -91,6 +118,24 @@ contextBridge.exposeInMainWorld('electronAPI', {
     system: {
         getInfo: async () => {
             return await ipcRenderer.invoke(IpcChannels.GET_SYSTEM_INFO);
+        },
+        createBackup: async () => {
+            return await ipcRenderer.invoke(IpcChannels.CREATE_BACKUP);
+        },
+        restoreBackup: async () => {
+            return await ipcRenderer.invoke(IpcChannels.RESTORE_BACKUP);
+        },
+    },
+    // 主密码模块
+    password: {
+        checkRequired: async () => {
+            return await ipcRenderer.invoke(IpcChannels.CHECK_MASTER_PASSWORD_REQUIRED);
+        },
+        set: async (masterPassword: string) => {
+            return await ipcRenderer.invoke(IpcChannels.SET_MASTER_PASSWORD, { masterPassword });
+        },
+        verify: async (masterPassword: string) => {
+            return await ipcRenderer.invoke(IpcChannels.VERIFY_MASTER_PASSWORD, { masterPassword });
         },
     },
 });

@@ -39,6 +39,11 @@ window.addEventListener('error', (event) => {
 
 // 使用 Pinia
 const pinia = createPinia();
+
+// 配置 Pinia 持久化插件
+import piniaPluginPersistedstate from 'pinia-plugin-persistedstate';
+pinia.use(piniaPluginPersistedstate);
+
 app.use(pinia);
 
 // 使用 Naive UI

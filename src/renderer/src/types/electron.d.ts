@@ -53,6 +53,13 @@ export interface IElectronAPI {
                 version: string;
             };
         } | { isAppError: true; code: string; message: string }>;
+        createBackup: () => Promise<{ success: boolean; backupPath?: string } | { isAppError: true; code: string; message: string }>;
+        restoreBackup: () => Promise<{ success: boolean } | { isAppError: true; code: string; message: string }>;
+    };
+    password: {
+        checkRequired: () => Promise<{ success: boolean; required?: boolean; needsSetup?: boolean } | { isAppError: true; code: string; message: string }>;
+        set: (masterPassword: string) => Promise<{ success: boolean } | { isAppError: true; code: string; message: string }>;
+        verify: (masterPassword: string) => Promise<{ success: boolean; verified?: boolean } | { isAppError: true; code: string; message: string }>;
     };
 }
 
@@ -61,4 +68,5 @@ declare global {
         electronAPI: IElectronAPI;
     }
 }
+
 

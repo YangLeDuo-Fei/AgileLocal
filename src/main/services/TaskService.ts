@@ -22,6 +22,9 @@ const CreateTaskSchema = z.object({
     description: z.string().nullable().optional(),
     storyPoints: z.number().int().nonnegative().default(0),
     status: z.enum(['ToDo', 'Doing', 'Done']).default('ToDo'),
+    assignee: z.string().nullable().optional(),
+    dueDate: z.string().nullable().optional(),
+    priority: z.number().int().min(1).max(3).optional().default(2),
 });
 
 /**
@@ -164,7 +167,10 @@ export async function createTask(
     description?: string | null,
     storyPoints: number = 0,
     status: 'ToDo' | 'Doing' | 'Done' = 'ToDo',
-    sprintId?: number | null
+    sprintId?: number | null,
+    assignee?: string | null,
+    dueDate?: string | null,
+    priority?: number
 ): Promise<number> {
     const validationResult = CreateTaskSchema.safeParse({
         projectId,
@@ -173,6 +179,9 @@ export async function createTask(
         description,
         storyPoints,
         status,
+        assignee,
+        dueDate,
+        priority: priority || 2,
     });
 
     if (!validationResult.success) {
@@ -204,6 +213,9 @@ export async function createTask(
                 status: validationResult.data.status,
                 kanban_order: newOrder,
                 version: 1,
+                assignee: validationResult.data.assignee || null,
+                due_date: validationResult.data.dueDate || null,
+                priority: validationResult.data.priority || 2,
             })
             .returning('id')
             .executeTakeFirstOrThrow();
@@ -228,21 +240,146 @@ export async function getTasksByProject(projectId: number, sprintId?: number | n
             .selectAll()
             .where('project_id', '=', projectId);
 
-        if (sprintId !== undefined) {
-            query = query.where('sprint_id', '=', sprintId || null);
+        // 只有当 sprintId 明确传入（不是 undefined）时才进行过滤
+        // undefined 表示不进行 sprintId 过滤，返回所有任务
+        if (sprintId !== undefined && sprintId !== null) {
+            query = query.where('sprint_id', '=', sprintId);
+        } else if (sprintId === null) {
+            // 明确传入 null，只查询 sprint_id 为 null 的任务
+            query = query.where('sprint_id', 'is', null);
         }
+        // sprintId === undefined 时不添加任何过滤，返回所有任务
 
         const tasks = await query
             .orderBy('status', 'asc')
             .orderBy('kanban_order', 'asc')
             .execute();
 
+        logger.info(`getTasksByProject: projectId=${projectId}, sprintId=${sprintId}, returned ${tasks.length} tasks`);
         return tasks;
     } catch (error) {
         logger.error('Failed to get tasks', error);
         throw new AppError('500_DB_ERROR', `Failed to get tasks: ${error}`);
     }
 }
+
+/**
+ * 更新任务信息
+ */
+export async function updateTask(
+    taskId: number,
+    title?: string,
+    description?: string | null,
+    storyPoints?: number,
+    status?: 'ToDo' | 'Doing' | 'Done',
+    assignee?: string | null,
+    dueDate?: string | null,
+    priority?: number
+): Promise<{ taskId: number }> {
+    const db = await getDatabase();
+
+    try {
+        // 构建更新对象
+        const updateData: any = {
+            updated_at: new Date().toISOString(),
+        };
+
+        if (title !== undefined) {
+            updateData.title = title;
+        }
+        if (description !== undefined) {
+            updateData.description = description;
+        }
+        if (storyPoints !== undefined) {
+            updateData.story_points = storyPoints;
+        }
+        if (status !== undefined) {
+            updateData.status = status;
+        }
+        if (assignee !== undefined) {
+            updateData.assignee = assignee;
+        }
+        if (dueDate !== undefined) {
+            updateData.due_date = dueDate;
+        }
+        if (priority !== undefined) {
+            updateData.priority = priority;
+        }
+
+        // 检查是否有字段需要更新
+        if (Object.keys(updateData).length === 1) {
+            throw new AppError('400_INVALID_INPUT', 'No fields to update');
+        }
+
+        const result = await db
+            .updateTable('tasks')
+            .set(updateData)
+            .where('id', '=', taskId)
+            .returning('id')
+            .executeTakeFirst();
+
+        if (!result) {
+            throw new AppError('400_INVALID_INPUT', `Task with id ${taskId} not found`);
+        }
+
+        logger.info(`Task updated: ${taskId}`);
+        return { taskId: result.id };
+    } catch (error) {
+        if (error instanceof AppError) {
+            throw error;
+        }
+        logger.error('Failed to update task', error);
+        throw new AppError('500_DB_ERROR', `Failed to update task: ${error}`);
+    }
+}
+
+/**
+ * 删除任务
+ */
+export async function deleteTask(taskId: number): Promise<void> {
+    const db = await getDatabase();
+
+    try {
+        // 先查询任务是否存在，用于日志
+        const task = await db
+            .selectFrom('tasks')
+            .select(['id', 'project_id', 'title'])
+            .where('id', '=', taskId)
+            .executeTakeFirst();
+
+        if (!task) {
+            logger.warn(`Task ${taskId} not found, cannot delete`);
+            throw new AppError('404_NOT_FOUND', `Task with id ${taskId} not found`);
+        }
+
+        // 执行删除
+        const result = await db
+            .deleteFrom('tasks')
+            .where('id', '=', taskId)
+            .execute();
+
+        logger.info(`Task deleted: id=${taskId}, project_id=${task.project_id}, title="${task.title}", deleted ${result.length} row(s)`);
+        
+        // 验证删除是否成功
+        const verifyDeleted = await db
+            .selectFrom('tasks')
+            .select('id')
+            .where('id', '=', taskId)
+            .executeTakeFirst();
+        
+        if (verifyDeleted) {
+            logger.error(`Task ${taskId} still exists after delete operation!`);
+            throw new AppError('500_DB_ERROR', 'Task deletion failed: task still exists');
+        }
+    } catch (error) {
+        if (error instanceof AppError) {
+            throw error;
+        }
+        logger.error('Failed to delete task', error);
+        throw new AppError('500_DB_ERROR', `Failed to delete task: ${error}`);
+    }
+}
+
 
 
 

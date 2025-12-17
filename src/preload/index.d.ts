@@ -20,6 +20,14 @@ export interface IElectronAPI {
             projectId: number,
             sprintId?: number | null
         ) => Promise<{ success: boolean; tasks?: any[] } | { isAppError: true; code: string; message: string }>;
+        update: (data: {
+            taskId: number;
+            title?: string;
+            description?: string | null;
+            storyPoints?: number;
+            status?: 'ToDo' | 'Doing' | 'Done';
+        }) => Promise<{ success: boolean; taskId?: number } | { isAppError: true; code: string; message: string }>;
+        delete: (taskId: number) => Promise<{ success: boolean } | { isAppError: true; code: string; message: string }>;
     };
     project: {
         create: (
@@ -52,6 +60,8 @@ export interface IElectronAPI {
                 version: string;
             };
         } | { isAppError: true; code: string; message: string }>;
+        createBackup: () => Promise<{ success: boolean; backupPath?: string } | { isAppError: true; code: string; message: string }>;
+        restoreBackup: () => Promise<{ success: boolean } | { isAppError: true; code: string; message: string }>;
     };
 }
 

@@ -3,8 +3,24 @@
   <n-layout class="app-layout">
     <n-layout-header class="app-header" bordered>
       <div class="header-content">
-        <h1 class="app-title">AgileLocal</h1>
-        <span class="app-subtitle">本地敏捷研发管理平台</span>
+        <div>
+          <h1 class="app-title">AgileLocal</h1>
+          <span class="app-subtitle">本地敏捷研发管理平台</span>
+        </div>
+        <n-space align="center" :size="16">
+          <n-button
+            quaternary
+            circle
+            @click="systemStore.toggleTheme()"
+            :title="systemStore.isDark ? '切换到浅色模式' : '切换到深色模式'"
+          >
+            <template #icon>
+              <span style="font-size: 20px;">
+                {{ systemStore.isDark ? '☀️' : '🌙' }}
+              </span>
+            </template>
+          </n-button>
+        </n-space>
       </div>
     </n-layout-header>
 
@@ -54,12 +70,20 @@
               <n-empty
                 v-if="projectStore.projects.length === 0"
                 size="large"
-                description="暂无项目"
+                description="还没有项目"
               >
+                <template #icon>
+                  <span style="font-size: 64px;">📁</span>
+                </template>
                 <template #extra>
-                  <n-button type="primary" size="large" @click="showCreateProjectDialog = true">
-                    创建项目
-                  </n-button>
+                  <n-space vertical :size="12" align="center">
+                    <n-text depth="3" style="font-size: 14px;">
+                      创建你的第一个项目，开始管理任务吧！
+                    </n-text>
+                    <n-button type="primary" size="large" @click="showCreateProjectDialog = true">
+                      + 创建项目
+                    </n-button>
+                  </n-space>
                 </template>
               </n-empty>
               <n-list v-else hoverable clickable>
@@ -94,7 +118,7 @@
         </n-card>
 
         <!-- 快速操作 -->
-        <n-grid :cols="3" :x-gap="16" class="quick-actions">
+        <n-grid :cols="4" :x-gap="16" class="quick-actions">
           <n-gi>
             <n-card :bordered="true" hoverable @click="handleOpenBoard">
               <n-space vertical :size="12" align="center">
@@ -113,6 +137,17 @@
                 <n-text strong>Git 同步</n-text>
                 <n-text depth="3" style="text-align: center; font-size: 12px;">
                   同步代码仓库状态
+                </n-text>
+              </n-space>
+            </n-card>
+          </n-gi>
+          <n-gi>
+            <n-card :bordered="true" hoverable @click="handleViewStatistics">
+              <n-space vertical :size="12" align="center">
+                <div class="icon-large">📊</div>
+                <n-text strong>统计分析</n-text>
+                <n-text depth="3" style="text-align: center; font-size: 12px;">
+                  查看项目统计
                 </n-text>
               </n-space>
             </n-card>
@@ -191,10 +226,12 @@ import {
   NSpin,
 } from 'naive-ui';
 import { useProjectStore } from '../stores/projectStore';
+import { useSystemStore } from '../stores/systemStore';
 
 const router = useRouter();
 const message = useMessage();
 const projectStore = useProjectStore();
+const systemStore = useSystemStore();
 
 const showCreateProjectDialog = ref(false);
 const createProjectForm = ref({
@@ -260,6 +297,10 @@ const handleSyncGit = () => {
   router.push('/git-sync');
 };
 
+const handleViewStatistics = () => {
+  router.push('/statistics');
+};
+
 const handleViewSettings = () => {
   router.push('/settings');
 };
@@ -291,8 +332,11 @@ onMounted(async () => {
 
 .header-content {
   display: flex;
-  flex-direction: column;
-  gap: 4px;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 .app-title {
@@ -314,6 +358,21 @@ onMounted(async () => {
   padding: 32px;
   overflow-y: auto;
   background: #f5f7fa;
+  transition: background-color 0.3s;
+}
+
+@media (max-width: 768px) {
+  .app-content {
+    padding: 16px;
+  }
+  
+  .content-container {
+    max-width: 100%;
+  }
+  
+  .quick-actions {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
 }
 
 .content-container {
@@ -386,7 +445,6 @@ onMounted(async () => {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  background: #ffffff;
 }
 
 .footer-content {
@@ -398,6 +456,7 @@ onMounted(async () => {
   align-items: center;
 }
 </style>
+
 
 
 

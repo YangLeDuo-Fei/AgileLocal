@@ -6,6 +6,7 @@ import { join } from 'path';
 import { IpcChannels } from './IpcChannels';
 import { AppError } from '../utils/AppError';
 import logger from '../utils/logger';
+import { getBackupService } from '../services/BackupService';
 
 /**
  * 注册系统相关的 IPC Handlers
@@ -39,8 +40,49 @@ export function registerSystemIpcHandlers(): void {
         }
     });
 
+    // 创建备份
+    ipcMain.handle(IpcChannels.CREATE_BACKUP, async () => {
+        try {
+            const backupService = getBackupService();
+            const backupPath = await backupService.createBackup();
+            return { success: true, backupPath };
+        } catch (error) {
+            if (error instanceof AppError) {
+                logger.error(`IPC createBackup failed with AppError: ${error.code}`, error.message);
+                return error.toSerializable();
+            }
+            logger.error('IPC createBackup failed with unknown error', error);
+            const appError = new AppError(
+                '500_BACKUP_ERROR',
+                error instanceof Error ? error.message : 'Unknown error occurred'
+            );
+            return appError.toSerializable();
+        }
+    });
+
+    // 恢复备份
+    ipcMain.handle(IpcChannels.RESTORE_BACKUP, async () => {
+        try {
+            const backupService = getBackupService();
+            await backupService.restoreBackup();
+            return { success: true };
+        } catch (error) {
+            if (error instanceof AppError) {
+                logger.error(`IPC restoreBackup failed with AppError: ${error.code}`, error.message);
+                return error.toSerializable();
+            }
+            logger.error('IPC restoreBackup failed with unknown error', error);
+            const appError = new AppError(
+                '500_RESTORE_ERROR',
+                error instanceof Error ? error.message : 'Unknown error occurred'
+            );
+            return appError.toSerializable();
+        }
+    });
+
     logger.info('System IPC handlers registered');
 }
+
 
 
 

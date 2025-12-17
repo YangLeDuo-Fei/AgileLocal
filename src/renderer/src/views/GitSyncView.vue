@@ -19,7 +19,7 @@
             </n-button>
           </template>
 
-          <n-spin :show="loading">
+          <n-spin :show="loading || syncing">
             <n-empty v-if="repositories.length === 0" description="暂无 Git 仓库">
               <template #extra>
                 <n-button type="primary" @click="showCreateRepoDialog = true">
@@ -30,27 +30,57 @@
 
             <n-list v-else>
               <n-list-item v-for="repo in repositories" :key="repo.id">
-                <n-thing>
+                <n-card :bordered="true" style="margin-bottom: 16px;">
                   <template #header>
-                    {{ repo.repo_url }}
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                      <n-text strong>{{ repo.repo_url }}</n-text>
+                      <n-tag :type="getSyncStatusType(repo)" size="small">
+                        {{ getSyncStatusText(repo) }}
+                      </n-tag>
+                    </div>
                   </template>
-                  <template #description>
-                    最后同步: {{ repo.last_synced_commit_sha || '未同步' }}
-                  </template>
-                  <template #header-extra>
+                  <n-space vertical :size="12">
+                    <div>
+                      <n-text depth="3" style="font-size: 12px;">最后同步:</n-text>
+                      <n-text style="margin-left: 8px; font-size: 12px;">
+                        {{ repo.last_synced_commit_sha ? formatCommitSha(repo.last_synced_commit_sha) : '未同步' }}
+                      </n-text>
+                    </div>
                     <n-space>
-                      <n-button @click="handleSync(repo.id)">
-                        手动同步
+                      <n-button 
+                        type="primary" 
+                        :loading="syncing && syncingRepoId === repo.id"
+                        @click="handleSync(repo.id)"
+                        :disabled="syncing"
+                      >
+                        {{ syncing && syncingRepoId === repo.id ? '同步中...' : '手动同步' }}
                       </n-button>
-                      <n-button text type="error" @click="handleDeleteRepo(repo.id)">
+                      <n-button text type="error" @click="handleDeleteRepo(repo.id)" :disabled="syncing">
                         删除
                       </n-button>
                     </n-space>
-                  </template>
-                </n-thing>
+                  </n-space>
+                </n-card>
               </n-list-item>
             </n-list>
           </n-spin>
+        </n-card>
+
+        <!-- 同步日志 -->
+        <n-card title="同步日志" :bordered="true" style="margin-top: 24px;">
+          <n-space vertical :size="12">
+            <n-timeline v-if="syncLogs.length > 0">
+              <n-timeline-item
+                v-for="(log, index) in syncLogs"
+                :key="index"
+                :type="log.type"
+                :time="formatTime(log.time)"
+              >
+                <n-text>{{ log.message }}</n-text>
+              </n-timeline-item>
+            </n-timeline>
+            <n-empty v-else description="暂无同步日志" size="small" />
+          </n-space>
         </n-card>
       </div>
     </n-layout-content>
@@ -82,13 +112,16 @@ import {
   NEmpty,
   NList,
   NListItem,
-  NThing,
+  NText,
+  NTag,
   NSpace,
   NModal,
   NForm,
   NFormItem,
   NInput,
   NSpin,
+  NTimeline,
+  NTimelineItem,
 } from 'naive-ui';
 import { useProjectStore } from '../stores/projectStore';
 
@@ -98,6 +131,9 @@ const projectStore = useProjectStore();
 
 const repositories = ref<any[]>([]);
 const loading = ref(false);
+const syncing = ref(false);
+const syncingRepoId = ref<number | null>(null);
+const syncLogs = ref<Array<{ type: 'default' | 'success' | 'error' | 'warning'; message: string; time: Date }>>([]);
 const showCreateRepoDialog = ref(false);
 const createRepoForm = ref({
   repoUrl: '',
@@ -166,21 +202,72 @@ const loadRepositories = async () => {
 };
 
 const handleSync = async (repoId: number) => {
+  syncing.value = true;
+  syncingRepoId.value = repoId;
+  addSyncLog('default', `开始同步仓库 ${repositories.value.find(r => r.id === repoId)?.repo_url || ''}...`);
+  
   try {
     const result = await window.electronAPI.git.sync();
     if (result && typeof result === 'object' && 'isAppError' in result && result.isAppError) {
       const error = result as any;
-      throw new Error(error.message || '同步失败');
+      addSyncLog('error', `同步失败: ${error.message || '未知错误'}`);
+      message.error(error.message || '同步失败');
+      return;
     }
     if (result && typeof result === 'object' && 'success' in result && result.success) {
+      addSyncLog('success', '同步成功');
       message.success('同步成功');
       await loadRepositories();
     } else {
       throw new Error('Unexpected response format');
     }
   } catch (error: any) {
+    addSyncLog('error', `同步失败: ${error.message || '未知错误'}`);
     message.error(error.message || '同步失败');
+  } finally {
+    syncing.value = false;
+    syncingRepoId.value = null;
   }
+};
+
+const addSyncLog = (type: 'default' | 'success' | 'error' | 'warning', message: string) => {
+  syncLogs.value.unshift({
+    type,
+    message,
+    time: new Date(),
+  });
+  // 只保留最近 50 条日志
+  if (syncLogs.value.length > 50) {
+    syncLogs.value = syncLogs.value.slice(0, 50);
+  }
+};
+
+const getSyncStatusType = (repo: any): 'default' | 'success' | 'error' | 'warning' => {
+  if (!repo.last_synced_commit_sha) return 'default';
+  // 可以根据需要添加更复杂的逻辑来判断同步状态
+  return 'success';
+};
+
+const getSyncStatusText = (repo: any): string => {
+  if (!repo.last_synced_commit_sha) return '未同步';
+  return '已同步';
+};
+
+const formatCommitSha = (sha: string): string => {
+  return sha.substring(0, 7);
+};
+
+const formatTime = (time: Date): string => {
+  const now = new Date();
+  const diff = now.getTime() - time.getTime();
+  const seconds = Math.floor(diff / 1000);
+  const minutes = Math.floor(seconds / 60);
+  const hours = Math.floor(minutes / 60);
+  
+  if (seconds < 60) return `${seconds}秒前`;
+  if (minutes < 60) return `${minutes}分钟前`;
+  if (hours < 24) return `${hours}小时前`;
+  return time.toLocaleString('zh-CN', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 };
 
 const handleDeleteRepo = async (repoId: number) => {
@@ -258,6 +345,7 @@ onMounted(async () => {
   margin: 0 auto;
 }
 </style>
+
 
 
 

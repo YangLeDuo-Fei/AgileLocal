@@ -11,6 +11,7 @@ import { registerGitIpcHandlers } from './ipc/gitIpc';
 import { registerProjectIpcHandlers } from './ipc/projectIpc';
 import { registerGitRepositoryIpcHandlers } from './ipc/gitRepositoryIpc';
 import { registerSystemIpcHandlers } from './ipc/systemIpc';
+import { registerPasswordIpcHandlers } from './ipc/passwordIpc';
 import { getGitSyncService } from './services/GitSyncService';
 
 let mainWindow: BrowserWindow | null = null;
@@ -148,6 +149,7 @@ app.whenReady().then(async () => {
     registerProjectIpcHandlers();
     registerGitRepositoryIpcHandlers();
     registerSystemIpcHandlers();
+    registerPasswordIpcHandlers();
 
     // 启动 Git 同步服务（定时任务）
     const gitSyncService = getGitSyncService();

@@ -5,6 +5,9 @@ import HomeView from '../views/HomeView.vue';
 import BoardView from '../views/BoardView.vue';
 import GitSyncView from '../views/GitSyncView.vue';
 import SettingsView from '../views/SettingsView.vue';
+import StatisticsView from '../views/StatisticsView.vue';
+import PasswordSetupView from '../views/PasswordSetupView.vue';
+import PasswordVerifyView from '../views/PasswordVerifyView.vue';
 
 const router = createRouter({
     history: createWebHashHistory(),
@@ -30,6 +33,21 @@ const router = createRouter({
             name: 'settings',
             component: SettingsView,
         },
+        {
+            path: '/statistics',
+            name: 'statistics',
+            component: StatisticsView,
+        },
+        {
+            path: '/password/setup',
+            name: 'password-setup',
+            component: PasswordSetupView,
+        },
+        {
+            path: '/password/verify',
+            name: 'password-verify',
+            component: PasswordVerifyView,
+        },
     ],
 });
 
@@ -44,6 +62,7 @@ router.beforeEach((to, from, next) => {
 });
 
 export default router;
+
 
 
 

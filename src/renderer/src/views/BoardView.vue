@@ -790,12 +790,15 @@ const initSortable = () => {
 };
 
 onMounted(async () => {
+  console.log('[BoardView] onMounted start, props.id:', props.id);
   loading.value = true;
   try {
     // 设置当前项目
     const projectId = typeof props.id === 'string' ? parseInt(props.id) : props.id;
+    console.log('[BoardView] parsed projectId:', projectId);
     
     if (isNaN(projectId) || projectId <= 0) {
+      console.error('[BoardView] Invalid projectId:', projectId);
       message.error('无效的项目ID');
       router.push('/');
       return;
@@ -803,9 +806,11 @@ onMounted(async () => {
 
     // 确保项目列表已加载
     if (projectStore.projects.length === 0) {
+      console.log('[BoardView] Loading projects...');
       await projectStore.loadProjects();
     }
 
+    console.log('[BoardView] Setting current project:', projectId);
     projectStore.setCurrentProject(projectId);
 
     // 加载 Sprint 列表
@@ -816,26 +821,31 @@ onMounted(async () => {
     }
 
     // 加载任务列表（watch 会自动同步，不需要手动调用 syncTasksToLocal）
+    console.log('[BoardView] Loading tasks...');
     isLoadingTasks = true;
     try {
       await taskStore.loadTasks(projectId);
+      console.log('[BoardView] Tasks loaded successfully');
       // 加载完成后立即同步一次，确保初始状态正确
       syncTasksToLocal();
+      console.log('[BoardView] Tasks synced to local');
       // 初始化 Sortable
       initSortable();
+      console.log('[BoardView] Sortable initialized');
     } finally {
       isLoadingTasks = false;
     }
   } catch (error: any) {
-    console.error('BoardView mounted error:', error);
+    console.error('[BoardView] mounted error:', error);
     message.error(error.message || '加载任务列表失败');
     // 出错时返回首页
     setTimeout(() => {
       router.push('/').catch(() => {
-        console.error('Failed to navigate to home');
+        console.error('[BoardView] Failed to navigate to home');
       });
     }, 1000);
   } finally {
+    console.log('[BoardView] onMounted complete, loading:', loading.value);
     loading.value = false;
   }
 });
@@ -1225,6 +1235,7 @@ html.dark .btn-add-task:hover {
   }
 }
 </style>
+
 
 
 

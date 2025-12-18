@@ -40,7 +40,7 @@
 ### 🛠 系统功能
 - ✅ **备份恢复**：一键备份数据库，支持恢复历史版本
 - ✅ **报表导出**：支持导出项目报表为 Markdown 格式
-- ✅ **跨平台支持**：Windows、macOS、Linux 全平台支持
+- ✅ **跨平台支持**：Windows全平台支持
 
 ## 📸 界面展示
 
@@ -88,15 +88,6 @@ npm install
 
 # 启动开发模式
 npm run dev
-```
-
-#### 方式三：本地打包
-
-```bash
-# 构建应用
-npm run build
-
-# 构建完成后，安装包在 dist 目录
 ```
 
 ### 首次使用
@@ -157,8 +148,6 @@ AgileLocal 使用多层加密保护您的数据：
 ### 数据存储位置
 
 - **Windows**: `%APPDATA%\AgileLocal\`
-- **macOS**: `~/Library/Application Support/AgileLocal/`
-- **Linux**: `~/.config/AgileLocal/`
 
 所有数据（数据库、加密密钥、日志）都存储在本地，**永不上传到任何服务器**。
 

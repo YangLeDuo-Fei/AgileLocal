@@ -18,11 +18,38 @@ export async function runMigrations(): Promise<void> {
         
         // 获取迁移文件目录路径
         // 开发模式：直接从源码目录读取（electron-vite 不复制文件）
-        // 生产模式：使用打包后的目录（out/main/database/migrations）
+        // 生产模式：优先尝试便携版本路径，然后尝试 asar 打包路径
         let migrationsPath: string;
         if (app.isPackaged) {
-            // 打包后：从 app.asar.unpacked 中读取解包的迁移文件
-            migrationsPath = join(process.resourcesPath, 'app.asar.unpacked', 'out', 'main', 'database', 'migrations');
+            // 打包后：尝试多种可能的路径
+            const possiblePackagedPaths = [
+                // 方式1: 便携版本（无 asar）
+                join(process.resourcesPath, 'app', 'main', 'database', 'migrations'),
+                // 方式2: asar 打包版本（解包）
+                join(process.resourcesPath, 'app.asar.unpacked', 'out', 'main', 'database', 'migrations'),
+                // 方式3: asar 打包版本（备用）
+                join(process.resourcesPath, 'app.asar.unpacked', 'main', 'database', 'migrations'),
+            ];
+            
+            // 尝试找到第一个存在的路径
+            let found = false;
+            for (const path of possiblePackagedPaths) {
+                try {
+                    await fs.access(path);
+                    migrationsPath = path;
+                    found = true;
+                    logger.info(`Found migrations path (packaged): ${path}`);
+                    break;
+                } catch {
+                    // 继续尝试下一个路径
+                }
+            }
+            
+            if (!found) {
+                const errorMsg = `Migrations directory not found in packaged app. Tried: ${possiblePackagedPaths.join(', ')}`;
+                logger.error(errorMsg);
+                throw new AppError('500_DB_ERROR', errorMsg);
+            }
         } else {
             // 开发模式：从源码目录读取
             // 尝试多种路径解析方式
@@ -103,13 +130,33 @@ export async function rollbackLastMigration(): Promise<void> {
     try {
         const db = await getDatabase();
         
-        // 获取迁移文件目录路径
-        // 开发模式：直接从源码目录读取（electron-vite 不复制文件）
-        // 生产模式：使用打包后的目录（out/main/database/migrations）
+        // 获取迁移文件目录路径（使用与 runMigrations 相同的逻辑）
         let migrationsPath: string;
         if (app.isPackaged) {
-            // 打包后：从 app.asar.unpacked 中读取解包的迁移文件
-            migrationsPath = join(process.resourcesPath, 'app.asar.unpacked', 'out', 'main', 'database', 'migrations');
+            // 打包后：尝试多种可能的路径
+            const possiblePackagedPaths = [
+                join(process.resourcesPath, 'app', 'main', 'database', 'migrations'),
+                join(process.resourcesPath, 'app.asar.unpacked', 'out', 'main', 'database', 'migrations'),
+                join(process.resourcesPath, 'app.asar.unpacked', 'main', 'database', 'migrations'),
+            ];
+            
+            let found = false;
+            for (const path of possiblePackagedPaths) {
+                try {
+                    await fs.access(path);
+                    migrationsPath = path;
+                    found = true;
+                    break;
+                } catch {
+                    // 继续尝试下一个路径
+                }
+            }
+            
+            if (!found) {
+                const errorMsg = `Migrations directory not found in packaged app. Tried: ${possiblePackagedPaths.join(', ')}`;
+                logger.error(errorMsg);
+                throw new AppError('500_DB_ERROR', errorMsg);
+            }
         } else {
             // 开发模式：从源码目录读取（使用与 runMigrations 相同的逻辑）
             const possiblePaths = [

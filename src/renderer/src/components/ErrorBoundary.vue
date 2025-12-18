@@ -1,22 +1,24 @@
 <!-- 错误边界组件 -->
 <template>
-  <div v-if="hasError" class="error-boundary">
-    <n-card>
-      <n-result
-        status="error"
-        title="组件加载失败"
-        :description="errorMessage"
-      >
-        <template #footer>
-          <n-button @click="handleReset">重试</n-button>
-          <n-button @click="handleGoHome" style="margin-left: 12px;">
-            返回首页
-          </n-button>
-        </template>
-      </n-result>
-    </n-card>
+  <div class="error-boundary-wrapper">
+    <div v-if="hasError" class="error-boundary">
+      <n-card>
+        <n-result
+          status="error"
+          title="组件加载失败"
+          :description="errorMessage"
+        >
+          <template #footer>
+            <n-button @click="handleReset">重试</n-button>
+            <n-button @click="handleGoHome" style="margin-left: 12px;">
+              返回首页
+            </n-button>
+          </template>
+        </n-result>
+      </n-card>
+    </div>
+    <slot v-else />
   </div>
-  <slot v-else />
 </template>
 
 <script setup lang="ts">
@@ -52,6 +54,11 @@ onErrorCaptured((err, instance, info) => {
 </script>
 
 <style scoped>
+.error-boundary-wrapper {
+  width: 100%;
+  height: 100vh;
+}
+
 .error-boundary {
   padding: 24px;
   width: 100%;
@@ -61,6 +68,7 @@ onErrorCaptured((err, instance, info) => {
   justify-content: center;
 }
 </style>
+
 
 
 

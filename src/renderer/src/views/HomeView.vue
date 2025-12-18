@@ -1,6 +1,7 @@
 <!-- 首页视图 - 苹果风格 -->
 <template>
-  <n-layout class="app-layout">
+  <div class="home-wrapper">
+    <n-layout class="app-layout">
     <!-- 极简顶部导航 -->
     <n-layout-header class="app-header">
       <div class="header-content">
@@ -272,6 +273,16 @@
       </n-form>
     </n-modal>
   </n-layout>
+
+    <!-- 项目密码验证弹窗 -->
+    <ProjectPasswordVerifyModal
+      :show="showPasswordVerifyModal"
+      :project-id="passwordVerifyProjectId || 0"
+      @verified="handlePasswordVerified"
+      @cancel="handlePasswordCancel"
+      @update:show="showPasswordVerifyModal = $event"
+    />
+  </div>
 </template>
 
 <script setup lang="ts">
@@ -613,6 +624,11 @@ onMounted(async () => {
 
 <style scoped>
 /* 苹果风格 - 极致简洁 */
+
+.home-wrapper {
+  width: 100%;
+  height: 100vh;
+}
 
 .app-layout {
   width: 100%;
@@ -1163,5 +1179,6 @@ html.dark .action-description {
   }
 }
 </style>
+
 
 

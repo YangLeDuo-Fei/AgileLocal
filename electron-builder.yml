@@ -22,6 +22,8 @@ files:
   - 'package.json'
 
 asar: true
+asarUnpack:
+  - 'out/main/database/migrations/**/*'
 
 win:
   target:
@@ -29,6 +31,7 @@ win:
       arch:
         - x64
   requestedExecutionLevel: asInvoker
+  sign: null
 
 nsis:
   oneClick: false

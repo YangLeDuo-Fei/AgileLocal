@@ -18,10 +18,11 @@ export async function runMigrations(): Promise<void> {
         
         // 获取迁移文件目录路径
         // 开发模式：直接从源码目录读取（electron-vite 不复制文件）
-        // 生产模式：使用打包后的目录
+        // 生产模式：使用打包后的目录（out/main/database/migrations）
         let migrationsPath: string;
         if (app.isPackaged) {
-            migrationsPath = join(process.resourcesPath, 'app.asar.unpacked', 'src', 'main', 'database', 'migrations');
+            // 打包后：从 app.asar.unpacked 中读取解包的迁移文件
+            migrationsPath = join(process.resourcesPath, 'app.asar.unpacked', 'out', 'main', 'database', 'migrations');
         } else {
             // 开发模式：从源码目录读取
             // 尝试多种路径解析方式
@@ -104,10 +105,11 @@ export async function rollbackLastMigration(): Promise<void> {
         
         // 获取迁移文件目录路径
         // 开发模式：直接从源码目录读取（electron-vite 不复制文件）
-        // 生产模式：使用打包后的目录
+        // 生产模式：使用打包后的目录（out/main/database/migrations）
         let migrationsPath: string;
         if (app.isPackaged) {
-            migrationsPath = join(process.resourcesPath, 'app.asar.unpacked', 'src', 'main', 'database', 'migrations');
+            // 打包后：从 app.asar.unpacked 中读取解包的迁移文件
+            migrationsPath = join(process.resourcesPath, 'app.asar.unpacked', 'out', 'main', 'database', 'migrations');
         } else {
             // 开发模式：从源码目录读取（使用与 runMigrations 相同的逻辑）
             const possiblePaths = [

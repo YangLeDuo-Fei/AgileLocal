@@ -229,10 +229,6 @@ AgileLocal/
 - [sortablejs](https://sortablejs.github.io/Sortable/) - 可拖拽列表库
 - [better-sqlite3](https://github.com/WiseLibs/better-sqlite3) - 高性能 SQLite3 绑定
 
-## 📞 联系方式
-
-- **Issues**: [GitHub Issues](https://github.com/yourusername/AgileLocal/issues)
-- **讨论**: [GitHub Discussions](https://github.com/yourusername/AgileLocal/discussions)
 
 ## ⚠️ 项目状态
 

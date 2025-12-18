@@ -74,15 +74,21 @@
       "out/**/*",
       "package.json"
     ],
+    "asar": true,
+    "asarUnpack": [
+      "out/main/database/migrations/**/*"
+    ],
+    "npmRebuild": false,
     "win": {
       "target": [
         {
-          "target": "nsis",
+          "target": "dir",
           "arch": [
             "x64"
           ]
         }
-      ]
+      ],
+      "sign": null
     },
     "nsis": {
       "oneClick": false,

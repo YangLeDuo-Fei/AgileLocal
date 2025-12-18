@@ -299,21 +299,21 @@ export class GitSyncService {
      * Token 加密方式与数据库密钥相同（使用 safeStorage 或 AES-256-GCM）
      */
     private async decryptToken(encryptedContent: string, encryptedIv: string): Promise<string> {
-        // 检查是否使用 safeStorage（如果 encryptedIv 为空，说明使用 safeStorage）
-        if (!encryptedIv || encryptedIv === '') {
-            // 使用 safeStorage 解密
-            if (!safeStorage.isEncryptionAvailable()) {
-                throw new Error('safeStorage not available');
-            }
+        try {
+            const keyManager = new KeyManager();
             
-            const encryptedBuffer = Buffer.from(encryptedContent, 'hex');
-            return safeStorage.decryptString(encryptedBuffer);
-        } else {
-            // 使用 AES-256-GCM 解密
-            // 注意：这里需要主密码，但根据文档要求，我们假设 Token 使用 safeStorage 加密
-            // 如果使用 Fallback，需要实现 UI 获取主密码的流程
-            // 为简化实现，这里暂时抛出错误提示使用 safeStorage
-            throw new Error('AES-256-GCM token decryption requires master password. Please use safeStorage for token encryption.');
+            // 将 hex 字符串转换为 Buffer
+            const iv = Buffer.from(encryptedIv, 'hex');
+            const content = Buffer.from(encryptedContent, 'hex');
+            
+            // 使用 KeyManager.decrypt 解密
+            const decrypted = await keyManager.decrypt({ iv, content });
+            
+            // 将解密后的 Buffer 转换为字符串
+            return decrypted.toString('utf-8');
+        } catch (error) {
+            logger.error('Failed to decrypt token', error);
+            throw new Error(`Failed to decrypt token: ${error instanceof Error ? error.message : String(error)}`);
         }
     }
 }
@@ -330,6 +330,7 @@ export function getGitSyncService(): GitSyncService {
     }
     return gitSyncServiceInstance;
 }
+
 
 
 

@@ -69,3 +69,4 @@ export function registerExportIpcHandlers() {
     logger.info('Export IPC handlers registered');
 }
 
+

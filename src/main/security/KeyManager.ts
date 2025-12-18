@@ -220,5 +220,61 @@ export class KeyManager {
     requiresMasterPassword(): boolean {
         return this.isUsingFallback();
     }
+
+    /**
+     * 加密通用数据（如 Git Token）
+     * 使用数据库密钥作为加密密钥
+     * @param data 要加密的数据
+     * @returns { iv: Buffer, content: Buffer } 加密结果
+     */
+    async encrypt(data: Buffer): Promise<{ iv: Buffer; content: Buffer }> {
+        // 获取数据库密钥作为加密密钥
+        const encryptionKey = await this.getDbKey();
+        
+        // 生成随机 IV
+        const iv = randomBytes(16);
+        
+        // 使用 AES-256-GCM 加密
+        const cipher = createCipheriv('aes-256-gcm', encryptionKey, iv);
+        const encrypted = Buffer.concat([
+            cipher.update(data),
+            cipher.final()
+        ]);
+        const authTag = cipher.getAuthTag();
+        
+        // 将 authTag 附加到加密内容
+        const encryptedWithTag = Buffer.concat([encrypted, authTag]);
+        
+        return {
+            iv,
+            content: encryptedWithTag
+        };
+    }
+
+    /**
+     * 解密通用数据（如 Git Token）
+     * 使用数据库密钥作为解密密钥
+     * @param encrypted { iv: Buffer, content: Buffer } 加密数据
+     * @returns 解密后的数据
+     */
+    async decrypt(encrypted: { iv: Buffer; content: Buffer }): Promise<Buffer> {
+        // 获取数据库密钥作为解密密钥
+        const encryptionKey = await this.getDbKey();
+        
+        // 分离加密内容和 authTag (GCM 模式 authTag 为 16 字节)
+        const authTag = encrypted.content.slice(-16);
+        const encryptedData = encrypted.content.slice(0, -16);
+        
+        // 使用 AES-256-GCM 解密
+        const decipher = createDecipheriv('aes-256-gcm', encryptionKey, encrypted.iv);
+        decipher.setAuthTag(authTag);
+        
+        const decrypted = Buffer.concat([
+            decipher.update(encryptedData),
+            decipher.final()
+        ]);
+        
+        return decrypted;
+    }
 }
 

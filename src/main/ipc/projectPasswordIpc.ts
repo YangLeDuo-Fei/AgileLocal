@@ -113,3 +113,4 @@ export function registerProjectPasswordIpcHandlers(): void {
     logger.info('Project password IPC handlers registered');
 }
 
+
